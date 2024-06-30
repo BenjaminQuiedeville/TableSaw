@@ -23,8 +23,6 @@
 
 
 #define UP_SAMPLE_FACTOR 4
-#define SMOOTH_PARAM_TIME 20.0
-
 #define FILTER_Q 0.4
 
 
@@ -131,14 +129,17 @@ struct Processor  : public juce::AudioProcessor,
     SmoothParamLinear gain;
     SmoothParamLinear volume;
     
+    
+    double samplerate = 44100.0;
+    double upSamplerate = UP_SAMPLE_FACTOR * samplerate;
+    
+    u32 upBlockSize = 0;
+
     OverSampler *overSampler;
     Sample *upSampledBlockL;
     Sample *upSampledBlockR;
     
     ChannelConfig channelConfig = Mono;
-    
-    double samplerate = 44100.0;
-    double upSamplerate = UP_SAMPLE_FACTOR * samplerate;
     
     void initParameters();
     void parameterChanged(const juce::String &parameterID, float newValue) override;

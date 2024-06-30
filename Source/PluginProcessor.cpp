@@ -8,8 +8,8 @@
 #include "PluginEditor.h"
 
 
-static inline void applyGain(float *bufferL, float bufferR, u32 numSamples, float gain) {
-
+static inline void applyGain(float *bufferL, float *bufferR, u32 numSamples, float gain) {
+    
     if (bufferL) {
         for (u32 index = 0; index < numSamples; index++) {
             bufferL[index] *= gain;
@@ -118,6 +118,8 @@ void Processor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     samplerate = sampleRate;
     upSamplerate = UP_SAMPLE_FACTOR * samplerate;
+    blockSize = samplesPerBlock;
+    upBlockSize = UP_SAMPLE_FACTOR * blockSize;
     
     inputFilter.prepareToPlay();
     softClipperFilter.prepareToPlay();
@@ -194,10 +196,11 @@ void Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
     
-    const u32 numSamples = buffer.getNumSamples();
+    const u32 bufferSize = buffer.getNumSamples();
+    assert(bufferSize == blockSize && "the buffer sizes are not constant");
         
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i) {
-        buffer.clear (i, 0, numSamples);
+        buffer.clear (i, 0, blockSize);
     }
     
     Sample *audioPtrL = buffer.getWritePointer(0);
@@ -207,34 +210,75 @@ void Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer
         audioPtrR = nullptr;
     }
 
-    if (channelConfig == FakeStereo) {
-        for (u32 i = 0; i < numSamples; i++) {
-            audioPtrR[i] = -audioPtrL[i];
-        }
-    }
+    // if (channelConfig == FakeStereo) {
+    //     for (u32 i = 0; i < blockSize; i++) {
+    //         audioPtrR[i] = -audioPtrL[i];
+    //     }
+    // }
 
     // input filtering
-    inputFilter.processHighPass(audioPtrL, audioPtrR, numSamples);
+    inputFilter.processHighpass(audioPtrL, audioPtrR, blockSize);
+    // input lowpass filtering (~10k) 
     
     // gain 
-    if (bufferR) {
-        for (u32 index = 0; index < numSamples; index++) {
+    if (audioPtrR) {
+        for (u32 index = 0; index < blockSize; index++) {
             float gainvalue = gain.nextValue();
-            audioPtrL[index] *= gain;
-            audioPtrR[index] *= gain;
+            audioPtrL[index] *= gainvalue;
+            audioPtrR[index] *= gainvalue;
         }
     } else {
-        for (u32 index = 0; index < numSamples; index++) {
+        for (u32 index = 0; index < blockSize; index++) {
             float gainvalue = gain.nextValue();
-            audioPtrL[index] *= gain;
+            audioPtrL[index] *= gainvalue;
         }
     } 
     
+
     // upsampling
-    // soft clip asym (avec filtre passe haut ?)
-    // decoupling
+    if (audioPtrR) {  
+        memset(upSampledBlockL, 0, upBlockSize * sizeof(Sample));
+        memset(upSampledBlockR, 0, upBlockSize * sizeof(Sample));
+        for (u32 i = 0; i < blockSize; i++) {
+            upSampledBlockL[UP_SAMPLE_FACTOR*i] = audioPtrL[i];
+            upSampledBlockR[UP_SAMPLE_FACTOR*i] = audioPtrR[i];
+        }
+    } else {
+        memset(upSampledBlockL, 0, upBlockSize * sizeof(Sample));
+        for (u32 i = 0; i < blockSize; i++) {
+            upSampledBlockL[UP_SAMPLE_FACTOR*i] = audioPtrL[i];
+        }    
+    }
+    
+    overSampler->upSampleFilter1.process(upSampledBlockL, upSampledBlockR, upBlockSize);    
+    overSampler->upSampleFilter2.process(upSampledBlockL, upSampledBlockR, upBlockSize);    
+
+    
+    // soft clip asym avec filtre passe haut (80Hz) et 
+    // passe bas sweep logarithmiquement de 20 à 5k
+    
+    
+    
+    // decoupling (20Hz)
     // diode (noisegatething)
     // hard clipping 
+    
+    //downsampling    
+    overSampler->downSampleFilter1.process(upSampledBlockL, upSampledBlockR, upBlockSize);
+    overSampler->downSampleFilter2.process(upSampledBlockL, upSampledBlockR, upBlockSize);
+
+
+    if (audioPtrR) {
+        for (u32 i = 0; i < blockSize; i++) {
+            audioPtrL[i] = upSampledBlockL[i*UP_SAMPLE_FACTOR];
+            audioPtrR[i] = upSampledBlockR[i*UP_SAMPLE_FACTOR];
+        }
+    } else {
+        for (u32 i = 0; i < blockSize; i++) {
+            audioPtrL[i] = upSampledBlockL[i*UP_SAMPLE_FACTOR];
+        }    
+    }
+
     // lowpass 
     // eq
     // volume
