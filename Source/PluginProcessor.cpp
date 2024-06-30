@@ -7,6 +7,22 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+
+static inline void applyGain(float *bufferL, float bufferR, u32 numSamples, float gain) {
+
+    if (bufferL) {
+        for (u32 index = 0; index < numSamples; index++) {
+            bufferL[index] *= gain;
+        }
+    }
+
+    if (bufferR) {
+        for (u32 index = 0; index < numSamples; index++) {
+            bufferR[index] *= gain;
+        }
+    }
+}
+
 //==============================================================================
 Processor::Processor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -197,10 +213,23 @@ void Processor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer
         }
     }
 
-    
-    
     // input filtering
+    inputFilter.processHighPass(audioPtrL, audioPtrR, numSamples);
+    
     // gain 
+    if (bufferR) {
+        for (u32 index = 0; index < numSamples; index++) {
+            float gainvalue = gain.nextValue();
+            audioPtrL[index] *= gain;
+            audioPtrR[index] *= gain;
+        }
+    } else {
+        for (u32 index = 0; index < numSamples; index++) {
+            float gainvalue = gain.nextValue();
+            audioPtrL[index] *= gain;
+        }
+    } 
+    
     // upsampling
     // soft clip asym (avec filtre passe haut ?)
     // decoupling
