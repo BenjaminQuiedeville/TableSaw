@@ -1,3 +1,9 @@
 build
 .vscode
 .vs
+
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.vst3

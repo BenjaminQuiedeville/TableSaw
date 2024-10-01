@@ -80,7 +80,22 @@ void* cplug_createPlugin()
     plugin->paramInfo[kGain].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
     plugin->paramInfo[kGain].max          = 1.0;
     plugin->paramInfo[kGain].min          = 0.0;
-    plugin->paramInfo[kGain].defaultValue = 0.0f;
+    plugin->paramInfo[kGain].defaultValue = 0.5f;
+
+    plugin->paramInfo[kLow].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    plugin->paramInfo[kLow].max          = 1.0;
+    plugin->paramInfo[kLow].min          = 0.0;
+    plugin->paramInfo[kLow].defaultValue = 0.5f;
+
+    plugin->paramInfo[kHigh].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    plugin->paramInfo[kHigh].max          = 1.0;
+    plugin->paramInfo[kHigh].min          = 0.0;
+    plugin->paramInfo[kHigh].defaultValue = 0.5f;
+
+    plugin->paramInfo[kVol].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    plugin->paramInfo[kVol].max          = 1.0;
+    plugin->paramInfo[kVol].min          = 0.0;
+    plugin->paramInfo[kVol].defaultValue = 0.5f;
 
     plugin->midiNote = -1;
     // init_gui = true;
@@ -133,7 +148,7 @@ const char* cplug_getOutputBusName(void* ptr, uint32_t idx)
 const char* cplug_getParameterName(void* ptr, uint32_t index)
 {
     (void)ptr;
-    static const char* param_names[] = {"Parameter Gain"};
+    static const char* param_names[] = {"Parameter Gain", "Parameter Low", "Parameter High", "Parameter Volume"};
     static_assert((sizeof(param_names) / sizeof(param_names[0])) == kParameterCount, "Invalid length");
     return param_names[index];
 }
@@ -490,18 +505,34 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
         
                 // Create a window called "Hello, world!" and append into it.
-                ImGui::Begin("Hello, world!");
+                ImGui::Begin("Table Saw");
         
                 // Display some text (you can use a format strings too)
-                ImGui::Text("This is some useful text.");
-                // Edit 1 float using a slider from 0.0f to 1.0f
                 static float gain_slider_value = 0.0f;
+                static float low_slider_value = 0.0f; 
+                static float high_slider_value = 0.0f;
+                static float vol_slider_value = 0.0f;
+
                 gain_slider_value = cplug_getParameterValue(plugin, kGain);
-                if (ImGui::SliderFloat("float", &gain_slider_value, 0.0f, 1.0f)) {
+                low_slider_value = cplug_getParameterValue(plugin, kLow);
+                high_slider_value = cplug_getParameterValue(plugin, kHigh);
+                vol_slider_value = cplug_getParameterValue(plugin, kVol);
+                
+                if (ImGui::SliderFloat("Gain", &gain_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kGain, gain_slider_value);
                 }
         
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+                if (ImGui::SliderFloat("Low", &low_slider_value, 0.0f, 1.0f)) {
+                    cplug_setParameterValue(plugin, kLow, low_slider_value);
+                }
+        
+                if (ImGui::SliderFloat("High", &high_slider_value, 0.0f, 1.0f)) {
+                    cplug_setParameterValue(plugin, kHigh, high_slider_value);
+                }
+        
+                if (ImGui::SliderFloat("Volume", &vol_slider_value, 0.0f, 1.0f)) {
+                    cplug_setParameterValue(plugin, kVol, vol_slider_value);
+                }        
                 ImGui::End();
             }
         

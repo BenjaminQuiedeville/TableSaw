@@ -5,43 +5,44 @@ from subprocess import Popen
 vst3 = True
 
 workspace_dir = os.getcwd()
-source_dir = workspace_dir + "/Source"
-lib_dir = workspace_dir + "/libs"
 
 # flags
 flags = "/nologo /MD /utf-8 /Zi"
 warning_flags = "/Wall /wo4820 /wo5220"
 output_name = ""
+output_extension = ""
 
 if vst3:
     flags += " /LD"
-    output_name += "plugin.vst3"
+    output_name += "tablesaw"
+    output_extension += "vst3"
 else:
-    output_name += "plugin.exe"
+    output_name += "tablesaw.exe"
+    output_extension += "exe"
 
 includes = " ".join([
-    f"/I{lib_dir}/CPLUG/src",
-    f"/I{lib_dir}/imgui", 
-    f"/I{lib_dir}/imgui/backends",
-    f"/FI{source_dir}/config.h"
+    f"/ICPLUG/src",
+    f"/Iimgui", 
+    f"/Iimgui/backends",
+    f"/FI{workspace_dir}/config.h"
 ])
 
 sources = [
-    f"{source_dir}/tablesaw.cpp", 
+    f"tablesaw.cpp", 
     
-    f"{lib_dir}imgui/imgui.cpp", 
-    f"{lib_dir}imgui/backends/imgui_impl_win32.cpp", 
-    f"{lib_dir}imgui/backends/imgui_impl_opengl3.cpp",
+    f"imgui/imgui.cpp", 
+    f"imgui/backends/imgui_impl_win32.cpp", 
+    f"imgui/backends/imgui_impl_opengl3.cpp",
     
-    f"{lib_dir}imgui/imgui_draw.cpp",
-    f"{lib_dir}imgui/imgui_tables.cpp",
-    f"{lib_dir}imgui/imgui_widgets.cpp",
+    f"imgui/imgui_draw.cpp",
+    f"imgui/imgui_tables.cpp",
+    f"imgui/imgui_widgets.cpp",
 ]
 
 if vst3:
-    sources.append("{lib_dir}CPLUG/src/cplug_vst3.c")
+    sources.append("CPLUG/src/cplug_vst3.c")
 else:
-    sources.append("{lib_dir}/CPLUG/src/cplug_standalone_win.c")
+    sources.append("CPLUG/src/cplug_standalone_win.c")
     
 libs = " ".join([
     "opengl32.lib",
@@ -57,8 +58,8 @@ processes = []
 files_to_clean = []
 
 for index, file in enumerate(sources):
-    
     # print(f"Compiling {file}")
+    
     command = f"cl /c {flags} {file} /Fd:{file}.pdb /Fo:{file}.obj {includes}"
     
     if file == "tablesaw.cpp":
@@ -81,7 +82,7 @@ if return_code != 0:
 
 
 print("Linking")
-link_command = f"cl {flags} /Fe:{output_name} /Fd:plugin.pdb"
+link_command = f"cl {flags} /Fe:{output_name}.{output_extension} /Fd:{output_name}.pdb"
 
 for file in sources:
     link_command += f" {file}.obj"
@@ -94,4 +95,5 @@ result = os.system(link_command)
 print("Cleaning")
 for file in files_to_clean:
     os.remove(file)
-    
+
+print("Done")
