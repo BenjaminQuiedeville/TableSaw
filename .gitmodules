@@ -1,6 +1,6 @@
-[submodule "libs/imgui"]
-	path = libs/imgui
-	url = https://github.com/ocornut/imgui.git
-[submodule "libs/CPLUG"]
-	path = libs/CPLUG
+[submodule "CPLUG"]
+	path = CPLUG
 	url = https://github.com/Tremus/CPLUG.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/ocornut/imgui.git
