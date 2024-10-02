@@ -6,9 +6,21 @@ vst3 = True
 
 workspace_dir = os.getcwd()
 
+faust = True
+if faust: 
+    print("Compiling the faust dsp code")
+    # command = "faust -a minimal-effect.cpp tablesaw.dsp -o tablesaw_faust.h -vec -nvi -i"
+    command = "faust -a minimal-effect.cpp tablesaw.dsp -o tablesaw_faust.h -vec -nvi"
+    print(command)
+
+    result = os.system(command)
+    if result:
+        print("Error during compilation of faust code, exiting")
+        exit(1)
+
 # flags
-flags = "/nologo /MD /utf-8 /Zi"
-warning_flags = "/Wall /wo4820 /wo5220"
+flags = "/nologo /MD /EHsc /utf-8 /Zi /D _USE_MATH_DEFINES /MP1"
+warning_flags = "/Wall /wd4820 /wd5220 /wd4100 /wd4201"
 output_name = ""
 output_extension = ""
 
@@ -24,7 +36,8 @@ includes = " ".join([
     f"/ICPLUG/src",
     f"/Iimgui", 
     f"/Iimgui/backends",
-    f"/FI{workspace_dir}/config.h"
+    f"/FI{workspace_dir}/config.h",
+    f"/I\"C:/Program Files/Faust/include\""
 ])
 
 sources = [
@@ -57,6 +70,7 @@ if not vst3 :
 processes = []
 files_to_clean = []
 
+print("Compiling c code")
 for index, file in enumerate(sources):
     # print(f"Compiling {file}")
     
@@ -69,15 +83,15 @@ for index, file in enumerate(sources):
     processes.append(Popen(command))
     files_to_clean.append(f"{file}.obj")
     files_to_clean.append(f"{file}.pdb")
-        
 return_code = 0
+        
 for index, process in enumerate(processes):
     process.wait()
     return_code += process.poll() 
     print(f"Compilation of {sources[index]} terminated with code {return_code}")
 
 if return_code != 0: 
-    print("Problems during compilation exiting")
+    print("Problems during compilation, exiting")
     exit(1)
 
 
@@ -91,6 +105,10 @@ link_command += f" /link {libs}"
 
 # print(link_command)
 result = os.system(link_command)
+
+if result != 0:
+    print("Problems during linking, exiting")
+    exit(1)
 
 print("Cleaning")
 for file in files_to_clean:
