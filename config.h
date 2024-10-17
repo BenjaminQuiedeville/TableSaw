@@ -31,16 +31,6 @@ static const unsigned kAudioUnitProperty_UserPlugin = 'plug';
 #define CPLUG_CLAP_DESCRIPTION "TableSaw"
 #define CPLUG_CLAP_FEATURES CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_STEREO
 
-// Examples of using common parameter types
-enum Parameters
-{
-    kGain,
-    kLow,
-    kHigh,
-    kVol,
-    kParameterCount
-};
-
 #define CPLUG_NUM_PARAMS 4
 
 #endif // PLUGIN_CONFIG_H

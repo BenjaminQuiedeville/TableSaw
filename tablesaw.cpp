@@ -1,4 +1,7 @@
-#include "CPLUG/src/cplug.h"
+#include <assert.h>
+#include <cmath>
+#include <stdio.h>
+#include <string>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -9,6 +12,8 @@
 #include <windowsx.h>
 #endif
 
+#include "CPLUG/src/cplug.h"
+
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_opengl3.h>
@@ -16,19 +21,30 @@
 #define GL_SILENCE_DEPRECATION
 #include <GL/GL.h>
 
-#include <assert.h>
-#include <cmath>
-#include <stdio.h>
-#include <string.h>
+enum Parameters
+{
+    kGain,
+    kLow,
+    kHigh,
+    kVol,
+    kParameterCount
+};
 
-#include <faust/gui/MapUI.h>
+static std::string param_labels[kParameterCount] = {
+    "gain",
+    "high",
+    "low",
+    "vol"
+};
+
+struct FaustInterface;
 #include "tablesaw_faust.h"
+typedef mydsp FaustDsp;
 
 /*
-créer un mydsp
-créer un mapui 
-lier les deux avec mydsp->buildUserInterface(ui*)
-récupérer le nombre de parametres avec mapui->getParamsCount()
+parametres principaux : gain, low, high, volume
+param additionnels : soft clip ceilings, crossover ceiling, hardclip ceiling, low freq, high freq
+    
 */
 
 
@@ -84,28 +100,33 @@ static inline u64 nextPowTwo(u64 n) {
     return n;
 }
 
-
 static_assert((int)CPLUG_NUM_PARAMS == kParameterCount, "Must be equal");
 
-typedef struct ParamInfo
-{
+typedef struct Oversampler {
+} Oversampler;
+
+typedef struct ParamInfo {
     float min;
     float max;
     float defaultValue;
     int   flags;
 } ParamInfo;
 
-typedef struct MyPlugin
-{
+typedef struct MyPlugin {
     ParamInfo paramInfo[kParameterCount];
     
     float    sampleRate;
     uint32_t maxBufferSize;
 
-    float paramValuesAudio[kParameterCount];
+    float *faust_param_zones[kParameterCount];
 
     int   midiNote; // -1 == not playing, 0-127+ playing
     float velocity; // 0-1
+
+    FaustDsp *faust_dsp;
+    FaustInterface *faust_interface;
+
+    Oversampler* oversampler;
 
     // GUI zone
     void* gui;
@@ -121,6 +142,8 @@ typedef struct MyPlugin
     CplugEvent       audioToMainQueue[CPLUG_EVENT_QUEUE_SIZE];
 } MyPlugin;
 
+#include "faust_interface.h"
+
 void sendParamEventFromMain(MyPlugin* plugin, uint32_t type, uint32_t paramIdx, double value);
 
 void cplug_libraryLoad(){};
@@ -131,35 +154,53 @@ void* cplug_createPlugin()
     MyPlugin* plugin = (MyPlugin*)malloc(sizeof(MyPlugin));
     memset(plugin, 0, sizeof(*plugin));
 
+    plugin->faust_dsp = new mydsp();
+    plugin->faust_interface = new FaustInterface();
+    
     // Init params
-    plugin->paramInfo[kGain].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
-    plugin->paramInfo[kGain].max          = 1.0;
-    plugin->paramInfo[kGain].min          = 0.0;
-    plugin->paramInfo[kGain].defaultValue = 0.5f;
+    ParamInfo *parameter = &plugin->paramInfo[kGain];
+    parameter->flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    parameter->max          = 1.0;
+    parameter->min          = 0.0;
+    parameter->defaultValue = 0.5f;
 
-    plugin->paramInfo[kLow].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
-    plugin->paramInfo[kLow].max          = 1.0;
-    plugin->paramInfo[kLow].min          = 0.0;
-    plugin->paramInfo[kLow].defaultValue = 0.5f;
+    parameter = &plugin->paramInfo[kLow];
+    parameter->flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    parameter->max          = 1.0;
+    parameter->min          = 0.0;
+    parameter->defaultValue = 0.5f;
 
-    plugin->paramInfo[kHigh].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
-    plugin->paramInfo[kHigh].max          = 1.0;
-    plugin->paramInfo[kHigh].min          = 0.0;
-    plugin->paramInfo[kHigh].defaultValue = 0.5f;
+    parameter = &plugin->paramInfo[kHigh];
+    parameter->flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    parameter->max          = 1.0;
+    parameter->min          = 0.0;
+    parameter->defaultValue = 0.5f;
 
-    plugin->paramInfo[kVol].flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
-    plugin->paramInfo[kVol].max          = 1.0;
-    plugin->paramInfo[kVol].min          = 0.0;
-    plugin->paramInfo[kVol].defaultValue = 0.5f;
+    parameter = &plugin->paramInfo[kVol];
+    parameter->flags        = CPLUG_FLAG_PARAMETER_IS_AUTOMATABLE;
+    parameter->max          = 1.0;
+    parameter->min          = 0.0;
+    parameter->defaultValue = 0.5f;
+
+    plugin->faust_interface->plugin = plugin;
+    plugin->faust_dsp->buildUserInterface(plugin->faust_interface);
+    int faust_num_params = plugin->faust_interface->getParamsCount();
+    assert(faust_num_params == kParameterCount);
 
     plugin->midiNote = -1;
     // init_gui = true;
     return plugin;
 }
+
 void cplug_destroyPlugin(void* ptr)
 {
     // Free any allocated resources in your plugin here
-    free(ptr);
+    
+    MyPlugin *plugin = (MyPlugin*)ptr;
+    
+    delete plugin->faust_dsp;
+    delete plugin->faust_interface;
+    free(plugin);
 }
 
 /* --------------------------------------------------------------------------------------------------------
@@ -211,7 +252,7 @@ const char* cplug_getParameterName(void* ptr, uint32_t index)
 double cplug_getParameterValue(void* ptr, uint32_t index)
 {
     const MyPlugin* plugin = (MyPlugin*)ptr;
-    double          val    = plugin->paramValuesAudio[index];
+    double          val    = *plugin->faust_param_zones[index];
     if (plugin->paramInfo[index].flags & CPLUG_FLAG_PARAMETER_IS_INTEGER)
         val = round(val);
     return val;
@@ -232,7 +273,9 @@ void cplug_setParameterValue(void* ptr, uint32_t index, double value)
         value = info->min;
     if (value > info->max)
         value = info->max;
-    plugin->paramValuesAudio[index] = (float)value;
+    *plugin->faust_param_zones[index] = (float)value;
+
+    // plugin->faust_interface->setParamValue(*info->faust_label, (FAUSTFLOAT)value);
 
     // Send incoming param update to GUI
     if (plugin->gui)
@@ -336,6 +379,8 @@ void cplug_setSampleRateAndBlockSize(void* ptr, double sampleRate, uint32_t maxB
     MyPlugin* plugin      = (MyPlugin*)ptr;
     plugin->sampleRate    = (float)sampleRate;
     plugin->maxBufferSize = maxBlockSize;
+    
+    plugin->faust_dsp->init((int)sampleRate);
 }
 
 void cplug_process(void* ptr, CplugProcessContext* ctx)
@@ -353,7 +398,7 @@ void cplug_process(void* ptr, CplugProcessContext* ctx)
         CplugEvent* event = &plugin->mainToAudioQueue[tail];
 
         if (event->type == CPLUG_EVENT_PARAM_CHANGE_UPDATE)
-            plugin->paramValuesAudio[event->parameter.idx] = event->parameter.value;
+            *plugin->faust_param_zones[event->parameter.idx] = (float)event->parameter.value;
 
         ctx->enqueueEvent(ctx, event, 0);
 
@@ -378,22 +423,19 @@ void cplug_process(void* ptr, CplugProcessContext* ctx)
         }
         case CPLUG_EVENT_PROCESS_AUDIO:
         {
-            // If your plugin does not require sample accurate processing, use this line below to break the loop
-            // frame = event.processAudio.endFrame;
 
             float** output = ctx->getAudioOutput(ctx, 0);
             float** input = ctx->getAudioInput(ctx, 0);
+            int num_samples = (int)event.processAudio.endFrame;
+
             CPLUG_LOG_ASSERT(output != NULL)
             CPLUG_LOG_ASSERT(output[0] != NULL);
             CPLUG_LOG_ASSERT(output[1] != NULL);
 
-            for (; frame < (int)event.processAudio.endFrame; frame++)
-            {
-                for (int ch = 0; ch < 2; ch++) {
-                    output[ch][frame] = input[ch][frame] * plugin->paramValuesMain[kGain];
-                }
-            }
-
+            plugin->faust_dsp->compute(num_samples, input, output);
+            
+            frame = event.processAudio.endFrame;
+        
             break;
         }
         default:
@@ -411,7 +453,7 @@ void cplug_process(void* ptr, CplugProcessContext* ctx)
 void cplug_saveState(void* userPlugin, const void* stateCtx, cplug_writeProc writeProc)
 {
     MyPlugin* plugin = (MyPlugin*)userPlugin;
-    writeProc(stateCtx, plugin->paramValuesAudio, sizeof(plugin->paramValuesAudio));
+    writeProc(stateCtx, *plugin->faust_param_zones, sizeof(*plugin->faust_param_zones));
 }
 
 void cplug_loadState(void* userPlugin, const void* stateCtx, cplug_readProc readProc)
@@ -422,12 +464,12 @@ void cplug_loadState(void* userPlugin, const void* stateCtx, cplug_readProc read
 
     int64_t bytesRead = readProc(stateCtx, vals, sizeof(vals));
 
-    if (bytesRead == sizeof(plugin->paramValuesAudio))
+    if (bytesRead == sizeof(*plugin->faust_param_zones))
     {
         // Send update to queue so we notify host
         for (int i = 0; i < kParameterCount; i++)
         {
-            plugin->paramValuesAudio[i] = vals[i];
+            *plugin->faust_param_zones[i] = vals[i];
             plugin->paramValuesMain[i]  = vals[i];
             sendParamEventFromMain(plugin, CPLUG_EVENT_PARAM_CHANGE_UPDATE, i, vals[i]);
         }
@@ -516,7 +558,7 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 switch (event->type)
                 {
                 case CPLUG_EVENT_PARAM_CHANGE_UPDATE:
-                    plugin->paramValuesMain[event->parameter.idx] = event->parameter.value;
+                    plugin->paramValuesMain[event->parameter.idx] = (float)event->parameter.value;
                     break;
                 default:
                     break;
@@ -568,10 +610,10 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 static float high_slider_value = 0.0f;
                 static float vol_slider_value = 0.0f;
 
-                gain_slider_value = cplug_getParameterValue(plugin, kGain);
-                low_slider_value = cplug_getParameterValue(plugin, kLow);
-                high_slider_value = cplug_getParameterValue(plugin, kHigh);
-                vol_slider_value = cplug_getParameterValue(plugin, kVol);
+                gain_slider_value = (float)cplug_getParameterValue(plugin, kGain);
+                low_slider_value  = (float)cplug_getParameterValue(plugin, kLow);
+                high_slider_value = (float)cplug_getParameterValue(plugin, kHigh);
+                vol_slider_value  = (float)cplug_getParameterValue(plugin, kVol);
                 
                 if (ImGui::SliderFloat("Gain", &gain_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kGain, gain_slider_value);
@@ -593,7 +635,6 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
         
             // Rendering
             ImGui::Render();
-            int display_w, display_h;
             glViewport(0, 0, gui->width, gui->height);
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -767,7 +808,12 @@ void cplug_setParent(void* userGUI, void* newParent)
     if (newParent)
     {
         SetParent((HWND)gui->window, (HWND)newParent);
-        memcpy(gui->plugin->paramValuesMain, gui->plugin->paramValuesAudio, sizeof(gui->plugin->paramValuesMain));
+        // memcpy(gui->plugin->paramValuesMain, gui->plugin->faust_param_zones, sizeof(gui->plugin->paramValuesMain));
+        
+        for (int param_index = 0; param_index < kParameterCount; param_index++) {
+            gui->plugin->paramValuesMain[param_index] = *gui->plugin->faust_param_zones[param_index];
+        }
+        
         DefWindowProcA((HWND)gui->window, WM_UPDATEUISTATE, UIS_CLEAR, WS_POPUP);
         DefWindowProcA((HWND)gui->window, WM_UPDATEUISTATE, UIS_SET, WS_CHILD);
 
