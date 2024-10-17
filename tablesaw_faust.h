@@ -113,10 +113,10 @@ class mydsp final : public dsp {
 	float fConst9;
 	float fConst11;
 	float fConst12;
-	float fConst14;
-	float fConst15;
 	FAUSTFLOAT fHslider2;
 	float fVec0[2];
+	float fConst14;
+	float fConst15;
 	float fConst17;
 	float fConst18;
 	float fRec5[2];
@@ -323,7 +323,7 @@ class mydsp final : public dsp {
 		float fSlow11 = fConst7 * (fConst7 + fSlow10) + 1.0f;
 		float fSlow12 = ((iSlow1) ? fSlow9 : fConst5);
 		float fSlow13 = fConst7 * (fConst7 - fSlow12) + 1.0f;
-		float fSlow14 = fConst7 * (fConst7 - fSlow10) + 1.0f;
+		float fSlow14 = 1.0f - fConst7 * (fSlow10 - fConst7);
 		float fSlow15 = 2e+01f * float(fHslider1);
 		int iSlow16 = fSlow15 > 0.0f;
 		float fSlow17 = fConst9 * std::pow(1e+01f, 0.05f * std::fabs(fSlow15));
@@ -342,9 +342,9 @@ class mydsp final : public dsp {
 			float fTemp1 = fConst8 * fRec1[1];
 			float fTemp2 = fConst12 * fRec2[1];
 			float fTemp3 = fSlow23 * float(input0[i0]);
-			float fTemp4 = tanhf(std::min<float>(0.0f, fTemp3)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
+			float fTemp4 = std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::min<float>(0.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
 			fVec0[0] = fTemp4;
-			fRec5[0] = fConst18 * fVec0[1] + fConst17 * (fConst14 * fTemp4 - fConst15 * fRec5[1]);
+			fRec5[0] = fConst18 * fVec0[1] - fConst17 * (fConst15 * fRec5[1] - fConst14 * fTemp4);
 			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec5[0]) + std::min<float>(-0.3f, fRec5[0])));
 			fVec1[0] = fTemp5;
 			fRec4[0] = 0.0f - fConst21 * (fConst20 * fRec4[1] - (fTemp5 + fVec1[1]));
@@ -359,7 +359,7 @@ class mydsp final : public dsp {
 			float fTemp9 = fSlow23 * float(input1[i0]);
 			float fTemp10 = tanhf(std::min<float>(0.0f, fTemp9)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
 			fVec2[0] = fTemp10;
-			fRec11[0] = fConst18 * fVec2[1] - fConst17 * (fConst15 * fRec11[1] - fConst14 * fTemp10);
+			fRec11[0] = fConst18 * fVec2[1] + fConst17 * (fConst14 * fTemp10 - fConst15 * fRec11[1]);
 			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec11[0]) + std::min<float>(-0.3f, fRec11[0])));
 			fVec3[0] = fTemp11;
 			fRec10[0] = fConst21 * (fTemp11 + fVec3[1] - fConst20 * fRec10[1]);

@@ -8,3 +8,5 @@ build
 *.lib
 *.vst3
 *.obj
+imgui.ini
+*.rdi
