@@ -5,18 +5,27 @@ argc = len(sys.argv)
 
 build_cpp = False
 build_faust = False
+release_mode = False
 
 if argc == 1 or sys.argv[1] == "all": 
     build_cpp = True
     build_faust = True
+    release_mode = False
 
 elif sys.argv[1] == "faust":
     build_cpp = False
     build_faust = True
+    release_mode = False
 
 elif sys.argv[1] == "cpp":
     build_cpp = True
     build_faust = False
+    release_mode = False
+    
+elif sys.argv[1] == "release":
+    build_cpp = True
+    build_faust = True
+    release_mode = True
 
 workspace_dir = os.getcwd()
 
@@ -37,12 +46,19 @@ if build_faust:
 
 
 if build_cpp:
-    # c flags
-    flags = "/nologo /MD /EHsc /utf-8 /Zi /D _USE_MATH_DEFINES /MP3 /LD"
-    warning_flags = "/W3"
-    
-    output_name = "tablesaw"
+
+    output_name = "Tablesaw_release" if release_mode else "Tablesaw_debug"
     output_extension = "vst3"
+    
+    # c flags
+    flags = f"/nologo /MD /EHsc /utf-8 /MP3 /LD /D _USE_MATH_DEFINES /D \"CPLUG_PLUGIN_NAME=\\\"{output_name}\\\"\""
+    
+    if release_mode:
+        flags += " /O2"
+    else:
+        flags += " /Zi"
+        
+    warning_flags = "/W3"
     
     includes = " ".join([
         "/ICPLUG/src",

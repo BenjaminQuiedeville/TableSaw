@@ -2,8 +2,7 @@
 
 [[workspace]]
 # These directories and files will be scanned when a workspace is opened so that search etc. works.
-C:/Users/benjamin/Dev/TableSaw
-C:/Program Files/Faust/include/faust/gui/MapUI.h
+./
 
 [ignore]
 # Files and directories matching the following wildcards will not be loaded or descended into
@@ -54,10 +53,11 @@ run_command:            W:/VSTHost/vsthost.exe %PROJECT_CONFIG_DIR%/tablesaw.vst
 run_working_dir:        %PROJECT_CONFIG_DIR%      # working dir for the run command
 key_binding:            Ctrl-F5
 
-
-# [Release]
-# build_command:          cmake --build build --config Release
-# key_binding:            F9
+[Release]
+build_command:          python build.py release  # should be an executable or a script
+build_working_dir:      %PROJECT_CONFIG_DIR%
+# timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
+key_binding:            F9
 
 
 
