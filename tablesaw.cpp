@@ -32,8 +32,8 @@ enum Parameters
 
 static std::string param_labels[kParameterCount] = {
     "gain",
-    "high",
     "low",
+    "high",
     "vol"
 };
 
@@ -68,8 +68,6 @@ typedef int64_t  s64;
 typedef float    f32;
 typedef double   f64;
 
-typedef float Sample;
-
 inline double dbtoa(double value) {
     return std::pow(10, value/20.0);
 }
@@ -102,34 +100,49 @@ static inline u64 nextPowTwo(u64 n) {
 
 static_assert((int)CPLUG_NUM_PARAMS == kParameterCount, "Must be equal");
 
-typedef struct Oversampler {
-} Oversampler;
+enum BiquadCoeffeicients {b0, b1, b2, a1, a2};
+enum BiquadState {w1L, w2L, w1R, w2R};
+enum UpBufferChannelIndex {inL, inR, outL, outR};
 
-typedef struct ParamInfo {
-    float min;
-    float max;
-    float defaultValue;
-    int   flags;
-} ParamInfo;
+struct Oversampler {
+    float biquad_coeffs1[5];
+    float biquad_coeffs2[5];
+    
+    float state_upsample1[4];
+    float state_upsample2[4];
 
-typedef struct MyPlugin {
+    float state_downsample1[4];
+    float state_downsample2[4];
+    
+    u32 upsample_factor;
+};
+
+struct ParamInfo {
+    float min = 0.0f;
+    float max = 0.0f;
+    float defaultValue = 0.0f;
+    int   flags = 0;
+};
+
+struct MyPlugin {
     ParamInfo paramInfo[kParameterCount];
     
-    float    sampleRate;
-    uint32_t maxBufferSize;
+    float    sampleRate = 0.0f;
+    uint32_t maxBufferSize = 0;
 
-    float *faust_param_zones[kParameterCount];
+    float *faust_param_zones[kParameterCount] = {0};
 
-    int   midiNote; // -1 == not playing, 0-127+ playing
-    float velocity; // 0-1
+    int   midiNote = -1; // -1 == not playing, 0-127+ playing
+    float velocity = 0; // 0-1
 
-    FaustDsp *faust_dsp;
-    FaustInterface *faust_interface;
+    FaustDsp *faust_dsp = nullptr;
+    FaustInterface *faust_interface = nullptr;
 
-    Oversampler* oversampler;
-
+    Oversampler oversampler = {};
+    float *up_buffer[4] = {0};
+    
     // GUI zone
-    void* gui;
+    void* gui = nullptr;
     float paramValuesMain[kParameterCount];
 
     // Single reader writer queue. Pretty sure atomics aren't required, but here anyway
@@ -140,7 +153,7 @@ typedef struct MyPlugin {
     cplug_atomic_i32 audioToMainHead;
     cplug_atomic_i32 audioToMainTail;
     CplugEvent       audioToMainQueue[CPLUG_EVENT_QUEUE_SIZE];
-} MyPlugin;
+};
 
 #include "faust_interface.h"
 
@@ -153,6 +166,16 @@ void* cplug_createPlugin()
 {
     MyPlugin* plugin = (MyPlugin*)malloc(sizeof(MyPlugin));
     memset(plugin, 0, sizeof(*plugin));
+    
+    plugin->oversampler = {
+        {1.0, 0.0, 0.0, 0.0, 0.0},
+        {1.0, 0.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0},
+        {0.0, 0.0},
+        {0.0, 0.0},
+        {0.0, 0.0},
+        4
+    };
 
     plugin->faust_dsp = new mydsp();
     plugin->faust_interface = new FaustInterface();
@@ -198,8 +221,14 @@ void cplug_destroyPlugin(void* ptr)
     
     MyPlugin *plugin = (MyPlugin*)ptr;
     
+    if (plugin->up_buffer[0]) { free(plugin->up_buffer[0]); }
+    
     delete plugin->faust_dsp;
+    plugin->faust_dsp = nullptr;
+    
     delete plugin->faust_interface;
+    plugin->faust_interface = nullptr;
+    
     free(plugin);
 }
 
@@ -381,6 +410,47 @@ void cplug_setSampleRateAndBlockSize(void* ptr, double sampleRate, uint32_t maxB
     plugin->maxBufferSize = maxBlockSize;
     
     plugin->faust_dsp->init((int)sampleRate);
+    
+    u32 up_buffer_size = plugin->oversampler.upsample_factor * maxBlockSize;
+    plugin->up_buffer[0] = (float*)calloc(sizeof(float), up_buffer_size * 4);
+    plugin->up_buffer[1] = plugin->up_buffer[0] + up_buffer_size; 
+    plugin->up_buffer[2] = plugin->up_buffer[1] + up_buffer_size;    
+    plugin->up_buffer[3] = plugin->up_buffer[2] + up_buffer_size; 
+    
+    // setup oversampler
+    // earlevel.com/main/2016/09/29/cascading-filters
+    {
+        Oversampler *ovs = &plugin->oversampler;
+        double frequency = sampleRate * 0.5 * 0.9;
+        double q_factor_butter1 = 0.54119610;
+        double q_factor_butter2 = 1.3065630;
+        double filter_samplerate = sampleRate * ovs->upsample_factor;
+    
+        double w0 = 2.0 * M_PI / filter_samplerate * frequency;
+        double cosw0 = cos(w0);
+        double sinw0 = sin(w0);
+
+        double alpha = sinw0/(2.0*q_factor_butter1);
+        double a0inv = 1.0/(1.0 + alpha);
+        
+        ovs->biquad_coeffs1[b0] = (float)((1.0 - cosw0) * 0.5 * a0inv);
+        ovs->biquad_coeffs1[b1] = (float)(2.0 * ovs->biquad_coeffs1[b0]);
+        ovs->biquad_coeffs1[b2] = ovs->biquad_coeffs1[b0];
+        ovs->biquad_coeffs1[a1] = (float)(-2.0 * cosw0 * a0inv);
+        ovs->biquad_coeffs1[a2] = (float)((1.0 - alpha) * a0inv);
+
+        
+        
+        alpha = sinw0/(2.0*q_factor_butter2);
+        a0inv = 1.0/(1.0 + alpha);
+
+        ovs->biquad_coeffs2[b0] = (float)((1.0 - cosw0) * 0.5 * a0inv);
+        ovs->biquad_coeffs2[b1] = (float)(2.0 * ovs->biquad_coeffs2[b0]);
+        ovs->biquad_coeffs2[b2] = ovs->biquad_coeffs2[b0];
+        ovs->biquad_coeffs2[a1] = (float)(-2.0 * cosw0 * a0inv);
+        ovs->biquad_coeffs2[a2] = (float)((1.0 - alpha) * a0inv);
+    }
+ 
 }
 
 void cplug_process(void* ptr, CplugProcessContext* ctx)
@@ -426,13 +496,145 @@ void cplug_process(void* ptr, CplugProcessContext* ctx)
 
             float** output = ctx->getAudioOutput(ctx, 0);
             float** input = ctx->getAudioInput(ctx, 0);
-            int num_samples = (int)event.processAudio.endFrame;
+            u32 num_samples = (u32)event.processAudio.endFrame;
 
             CPLUG_LOG_ASSERT(output != NULL)
             CPLUG_LOG_ASSERT(output[0] != NULL);
             CPLUG_LOG_ASSERT(output[1] != NULL);
+            assert(num_samples == plugin->maxBufferSize);
+            
+            Oversampler *ovs = &plugin->oversampler;
+            float *up_buffer_in[2] = {plugin->up_buffer[inL], plugin->up_buffer[inR]};
+            float *up_buffer_out[2] = {plugin->up_buffer[outL], plugin->up_buffer[outR]};
+            
+            u32 up_num_samples = ovs->upsample_factor * num_samples;
+            
+            // upsample
+            memset(up_buffer_in[0], 0, up_num_samples * sizeof(float));
+            memset(up_buffer_in[1], 0, up_num_samples * sizeof(float));
+            
+            for (u32 i = 0; i < num_samples; i++) {
+                up_buffer_in[0][ovs->upsample_factor*i] = input[0][i];
+                up_buffer_in[1][ovs->upsample_factor*i] = input[1][i];
+            }
+            
+            for (u32 i = 0; i < up_num_samples; i++) {
+                // left buffer
+                float w = up_buffer_in[0][i] 
+                        - ovs->biquad_coeffs1[a1] * ovs->state_upsample1[w1L]
+                        - ovs->biquad_coeffs1[a2] * ovs->state_upsample1[w2L];
+                
+                up_buffer_in[0][i] = ovs->biquad_coeffs1[b0] * w
+                                   + ovs->biquad_coeffs1[b1] * ovs->state_upsample1[w1L]
+                                   + ovs->biquad_coeffs1[b2] * ovs->state_upsample1[w2L];
+                
+                ovs->state_upsample1[w2L] = ovs->state_upsample1[w1L];
+                ovs->state_upsample1[w1L] = w; 
 
-            plugin->faust_dsp->compute(num_samples, input, output);
+
+                w = up_buffer_in[0][i] 
+                  - ovs->biquad_coeffs2[a1] * ovs->state_upsample2[w1L]
+                  - ovs->biquad_coeffs2[a2] * ovs->state_upsample2[w2L];
+            
+                up_buffer_in[0][i] = ovs->biquad_coeffs2[b0] * w
+                                   + ovs->biquad_coeffs2[b1] * ovs->state_upsample2[w1L]
+                                   + ovs->biquad_coeffs2[b2] * ovs->state_upsample2[w2L];
+                
+                ovs->state_upsample2[w2L] = ovs->state_upsample2[w1L];
+                ovs->state_upsample2[w1L] = w; 
+
+                up_buffer_in[0][i] *= ovs->upsample_factor;
+
+                // right buffer
+                w = up_buffer_in[1][i] 
+                  - ovs->biquad_coeffs1[a1] * ovs->state_upsample1[w1R]
+                  - ovs->biquad_coeffs1[a2] * ovs->state_upsample1[w2R];
+                
+                up_buffer_in[1][i] = ovs->biquad_coeffs1[b0] * w
+                                   + ovs->biquad_coeffs1[b1] * ovs->state_upsample1[w1R]
+                                   + ovs->biquad_coeffs1[b2] * ovs->state_upsample1[w2R];
+                
+                ovs->state_upsample1[w2R] = ovs->state_upsample1[w1R];
+                ovs->state_upsample1[w1R] = w; 
+
+
+
+                w = up_buffer_in[1][i] 
+                  - ovs->biquad_coeffs2[a1] * ovs->state_upsample2[w1R]
+                  - ovs->biquad_coeffs2[a2] * ovs->state_upsample2[w2R];
+            
+                up_buffer_in[1][i] = ovs->biquad_coeffs2[b0] * w
+                                   + ovs->biquad_coeffs2[b1] * ovs->state_upsample2[w1R]
+                                   + ovs->biquad_coeffs2[b2] * ovs->state_upsample2[w2R];
+                
+                ovs->state_upsample2[w2R] = ovs->state_upsample2[w1R];
+                ovs->state_upsample2[w1R] = w; 
+
+                up_buffer_in[1][i] *= ovs->upsample_factor;
+            }
+            
+            plugin->faust_dsp->compute(up_num_samples, up_buffer_in, up_buffer_out);
+            
+            // downsample
+            for (u32 i = 0; i < up_num_samples; i++) {
+                // left buffer
+                float w = up_buffer_out[0][i] 
+                        - ovs->biquad_coeffs1[a1] * ovs->state_downsample1[w1L]
+                        - ovs->biquad_coeffs1[a2] * ovs->state_downsample1[w2L];
+                
+                up_buffer_out[0][i] = ovs->biquad_coeffs1[b0] * w
+                              + ovs->biquad_coeffs1[b1] * ovs->state_downsample1[w1L]
+                              + ovs->biquad_coeffs1[b2] * ovs->state_downsample1[w2L];
+                
+                ovs->state_downsample1[w2L] = ovs->state_downsample1[w1L];
+                ovs->state_downsample1[w1L] = w; 
+
+
+                w = up_buffer_out[0][i] 
+                  - ovs->biquad_coeffs2[a1] * ovs->state_downsample2[w1L]
+                  - ovs->biquad_coeffs2[a2] * ovs->state_downsample2[w2L];
+            
+                up_buffer_out[0][i] = ovs->biquad_coeffs2[b0] * w
+                              + ovs->biquad_coeffs2[b1] * ovs->state_downsample2[w1L]
+                              + ovs->biquad_coeffs2[b2] * ovs->state_downsample2[w2L];
+                
+                ovs->state_downsample2[w2L] = ovs->state_downsample2[w1L];
+                ovs->state_downsample2[w1L] = w; 
+
+
+
+                // right buffer
+                w = up_buffer_out[1][i] 
+                  - ovs->biquad_coeffs1[a1] * ovs->state_downsample1[w1R]
+                  - ovs->biquad_coeffs1[a2] * ovs->state_downsample1[w2R];
+                
+                up_buffer_out[1][i] = ovs->biquad_coeffs1[b0] * w
+                              + ovs->biquad_coeffs1[b1] * ovs->state_downsample1[w1R]
+                              + ovs->biquad_coeffs1[b2] * ovs->state_downsample1[w2R];
+                
+                ovs->state_downsample1[w2R] = ovs->state_downsample1[w1R];
+                ovs->state_downsample1[w1R] = w; 
+
+
+
+                w = up_buffer_out[1][i] 
+                  - ovs->biquad_coeffs2[a1] * ovs->state_downsample2[w1R]
+                  - ovs->biquad_coeffs2[a2] * ovs->state_downsample2[w2R];
+            
+                up_buffer_out[1][i] = ovs->biquad_coeffs2[b0] * w
+                              + ovs->biquad_coeffs2[b1] * ovs->state_downsample2[w1R]
+                              + ovs->biquad_coeffs2[b2] * ovs->state_downsample2[w2R];
+                
+                ovs->state_downsample2[w2R] = ovs->state_downsample2[w1R];
+                ovs->state_downsample2[w1R] = w; 
+
+            }    
+            
+            for (u32 i = 0; i < num_samples; i++) {
+                output[0][i] = up_buffer_out[0][i*ovs->upsample_factor];
+                output[1][i] = up_buffer_out[1][i*ovs->upsample_factor];
+            }
+            
             
             frame = event.processAudio.endFrame;
         
@@ -507,7 +709,7 @@ static WGL_WindowData   g_MainWindow;
 
 static bool init_gui = true;
 
-typedef struct MyGUI {
+struct MyGUI {
 
     MyPlugin* plugin;
     void*     window; // HWND / NSView
@@ -515,10 +717,9 @@ typedef struct MyGUI {
     char uniqueClassName[64];
 #endif
 
-    uint32_t* img;
-    uint32_t  width;
-    uint32_t  height;
-} MyGUI;
+    uint32_t  width = 0;
+    uint32_t  height = 0;
+};
 
 
 // Forward declare message handler from imgui_impl_win32.cpp
@@ -615,19 +816,22 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 high_slider_value = (float)cplug_getParameterValue(plugin, kHigh);
                 vol_slider_value  = (float)cplug_getParameterValue(plugin, kVol);
                 
-                if (ImGui::SliderFloat("Gain", &gain_slider_value, 0.0f, 1.0f)) {
+                if (ImGui::VSliderFloat("Gain", ImVec2(20, 200), &gain_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kGain, gain_slider_value);
                 }
+                ImGui::SameLine();
         
-                if (ImGui::SliderFloat("Low", &low_slider_value, 0.0f, 1.0f)) {
+                if (ImGui::VSliderFloat("Low", ImVec2(20, 200), &low_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kLow, low_slider_value);
                 }
+                ImGui::SameLine();
         
-                if (ImGui::SliderFloat("High", &high_slider_value, 0.0f, 1.0f)) {
+                if (ImGui::VSliderFloat("High", ImVec2(20, 200), &high_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kHigh, high_slider_value);
                 }
+                ImGui::SameLine();
         
-                if (ImGui::SliderFloat("Volume", &vol_slider_value, 0.0f, 1.0f)) {
+                if (ImGui::VSliderFloat("Volume", ImVec2(20, 200), &vol_slider_value, 0.0f, 1.0f)) {
                     cplug_setParameterValue(plugin, kVol, vol_slider_value);
                 }        
                 ImGui::End();
@@ -689,7 +893,6 @@ void* cplug_createGUI(void* userPlugin)
     
     gui->width  = GUI_DEFAULT_WIDTH;
     gui->height = GUI_DEFAULT_HEIGHT;
-    gui->img    = (uint32_t*)realloc(gui->img, gui->width * gui->height * sizeof(*gui->img));
 
     LARGE_INTEGER timenow;
     QueryPerformanceCounter(&timenow);
@@ -785,8 +988,6 @@ void cplug_destroyGUI(void* userGUI)
     init_gui = true;
     gui->plugin->gui = NULL;
 
-    if (gui->img)
-        free(gui->img);
 
     free(gui);
 }
@@ -847,7 +1048,6 @@ bool cplug_setSize(void* userGUI, uint32_t width, uint32_t height)
     MyGUI* gui  = (MyGUI*)userGUI;
     gui->width  = width;
     gui->height = height;
-    gui->img    = (uint32_t*)realloc(gui->img, width * height * sizeof(*gui->img));
     return SetWindowPos(
         (HWND)gui->window,
         HWND_TOP,

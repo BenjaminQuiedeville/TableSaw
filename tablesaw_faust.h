@@ -317,7 +317,7 @@ class mydsp final : public dsp {
 		float fSlow5 = fConst3 * (fConst3 + fSlow4) + 1.0f;
 		float fSlow6 = ((iSlow1) ? fSlow3 : fConst1);
 		float fSlow7 = fConst3 * (fConst3 - fSlow6) + 1.0f;
-		float fSlow8 = 1.0f - fConst3 * (fSlow4 - fConst3);
+		float fSlow8 = fConst3 * (fConst3 - fSlow4) + 1.0f;
 		float fSlow9 = fConst5 * fSlow2;
 		float fSlow10 = ((iSlow1) ? fConst5 : fSlow9);
 		float fSlow11 = fConst7 * (fConst7 + fSlow10) + 1.0f;
@@ -331,7 +331,7 @@ class mydsp final : public dsp {
 		float fSlow19 = fConst11 * (fConst11 + fSlow18) + 1.0f;
 		float fSlow20 = ((iSlow16) ? fSlow17 : fConst9);
 		float fSlow21 = fConst11 * (fConst11 - fSlow20) + 1.0f;
-		float fSlow22 = fConst11 * (fConst11 - fSlow18) + 1.0f;
+		float fSlow22 = 1.0f - fConst11 * (fSlow18 - fConst11);
 		float fSlow23 = std::pow(1e+01f, 1.5f * float(fHslider2));
 		float fSlow24 = fConst11 * (fConst11 + fSlow20) + 1.0f;
 		float fSlow25 = fConst7 * (fConst7 + fSlow12) + 1.0f;
@@ -342,7 +342,7 @@ class mydsp final : public dsp {
 			float fTemp1 = fConst8 * fRec1[1];
 			float fTemp2 = fConst12 * fRec2[1];
 			float fTemp3 = fSlow23 * float(input0[i0]);
-			float fTemp4 = std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::min<float>(0.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
+			float fTemp4 = tanhf(std::min<float>(0.0f, fTemp3)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
 			fVec0[0] = fTemp4;
 			fRec5[0] = fConst18 * fVec0[1] - fConst17 * (fConst15 * fRec5[1] - fConst14 * fTemp4);
 			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec5[0]) + std::min<float>(-0.3f, fRec5[0])));
@@ -362,7 +362,7 @@ class mydsp final : public dsp {
 			fRec11[0] = fConst18 * fVec2[1] + fConst17 * (fConst14 * fTemp10 - fConst15 * fRec11[1]);
 			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec11[0]) + std::min<float>(-0.3f, fRec11[0])));
 			fVec3[0] = fTemp11;
-			fRec10[0] = fConst21 * (fTemp11 + fVec3[1] - fConst20 * fRec10[1]);
+			fRec10[0] = 0.0f - fConst21 * (fConst20 * fRec10[1] - (fTemp11 + fVec3[1]));
 			fRec9[0] = fConst18 * fRec10[1] - fConst17 * (fConst15 * fRec9[1] - fConst14 * fRec10[0]);
 			fRec8[0] = fRec9[0] - (fSlow22 * fRec8[2] + fTemp8) / fSlow19;
 			fRec7[0] = (fTemp8 + fRec8[0] * fSlow24 + fSlow21 * fRec8[2]) / fSlow19 - (fSlow14 * fRec7[2] + fTemp7) / fSlow11;
