@@ -3,7 +3,7 @@
 
 #define CPLUG_COMPANY_NAME "Hermes"
 #define CPLUG_COMPANY_EMAIL ""
-#define CPLUG_PLUGIN_NAME "TableSaw"
+// #define CPLUG_PLUGIN_NAME "TableSaw"
 #define CPLUG_PLUGIN_URI "http://github.com/BenjaminQuiedeville/TableSaw"
 #define CPLUG_PLUGIN_VERSION "0.0.1"
 
