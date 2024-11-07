@@ -18,8 +18,13 @@ volume = hslider("vol", 0.5, 0.0, 1.0, 0.1);
 // bypass(circuit, param) = _ <: circuit, _ : *(param) * (1 - param) : +;
 // write_left_to_right(param) = (_ <: _, _), _ : _, (*(param), *(1-param) : +)
 
-process = _, _ : hm2, hm2
+process = _, _ 
+        : fi.lowpass(4, filter_freq), fi.lowpass(4, filter_freq)
+        : hm2, hm2
+        : fi.lowpass(4, filter_freq), fi.lowpass(4, filter_freq) 
 with {
+
+    filter_freq = ma.SR * 0.5 * 0.25 * 0.9;
 
     ceiling = 1;
     min_gain_db = 0.0;

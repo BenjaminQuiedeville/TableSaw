@@ -113,30 +113,38 @@ class mydsp final : public dsp {
 	float fConst9;
 	float fConst11;
 	float fConst12;
+	float fRec9[3];
+	float fRec8[3];
 	FAUSTFLOAT fHslider2;
 	float fVec0[2];
 	float fConst14;
 	float fConst15;
 	float fConst17;
 	float fConst18;
-	float fRec5[2];
+	float fRec7[2];
 	float fVec1[2];
 	float fConst20;
 	float fConst21;
-	float fRec4[2];
-	float fRec3[2];
+	float fRec6[2];
+	float fRec5[2];
+	float fRec4[3];
+	float fRec3[3];
 	float fRec2[3];
+	FAUSTFLOAT fHslider3;
 	float fRec1[3];
 	float fRec0[3];
-	FAUSTFLOAT fHslider3;
+	float fRec19[3];
+	float fRec18[3];
 	float fVec2[2];
-	float fRec11[2];
+	float fRec17[2];
 	float fVec3[2];
-	float fRec10[2];
-	float fRec9[2];
-	float fRec8[3];
-	float fRec7[3];
-	float fRec6[3];
+	float fRec16[2];
+	float fRec15[2];
+	float fRec14[3];
+	float fRec13[3];
+	float fRec12[3];
+	float fRec11[3];
+	float fRec10[3];
 	
  public:
 	mydsp() {}
@@ -156,6 +164,25 @@ class mydsp final : public dsp {
 		m->declare("filter.lib/name", "Faust Filter Library");
 		m->declare("filter.lib/reference", "https://ccrma.stanford.edu/~jos/filters/");
 		m->declare("filter.lib/version", "1.29");
+		m->declare("filters.lib/fir:author", "Julius O. Smith III");
+		m->declare("filters.lib/fir:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/fir:license", "MIT-style STK-4.3 license");
+		m->declare("filters.lib/iir:author", "Julius O. Smith III");
+		m->declare("filters.lib/iir:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/iir:license", "MIT-style STK-4.3 license");
+		m->declare("filters.lib/lowpass0_highpass1", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/lowpass0_highpass1:author", "Julius O. Smith III");
+		m->declare("filters.lib/lowpass:author", "Julius O. Smith III");
+		m->declare("filters.lib/lowpass:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/lowpass:license", "MIT-style STK-4.3 license");
+		m->declare("filters.lib/name", "Faust Filters Library");
+		m->declare("filters.lib/tf2:author", "Julius O. Smith III");
+		m->declare("filters.lib/tf2:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/tf2:license", "MIT-style STK-4.3 license");
+		m->declare("filters.lib/tf2s:author", "Julius O. Smith III");
+		m->declare("filters.lib/tf2s:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/tf2s:license", "MIT-style STK-4.3 license");
+		m->declare("filters.lib/version", "1.3.0");
 		m->declare("math.lib/author", "GRAME");
 		m->declare("math.lib/copyright", "GRAME");
 		m->declare("math.lib/deprecated", "This library is deprecated and is not maintained anymore. It will be removed in August 2017.");
@@ -174,6 +201,8 @@ class mydsp final : public dsp {
 		m->declare("music.lib/name", "Music Library");
 		m->declare("music.lib/version", "1.0");
 		m->declare("name", "TableSaw");
+		m->declare("platform.lib/name", "Generic Platform Library");
+		m->declare("platform.lib/version", "1.3.0");
 		m->declare("version", "0.0.1");
 	}
 
@@ -227,53 +256,77 @@ class mydsp final : public dsp {
 	}
 	
 	void instanceClear() {
-		for (int l0 = 0; l0 < 2; l0 = l0 + 1) {
-			fVec0[l0] = 0.0f;
+		for (int l0 = 0; l0 < 3; l0 = l0 + 1) {
+			fRec9[l0] = 0.0f;
 		}
-		for (int l1 = 0; l1 < 2; l1 = l1 + 1) {
-			fRec5[l1] = 0.0f;
+		for (int l1 = 0; l1 < 3; l1 = l1 + 1) {
+			fRec8[l1] = 0.0f;
 		}
 		for (int l2 = 0; l2 < 2; l2 = l2 + 1) {
-			fVec1[l2] = 0.0f;
+			fVec0[l2] = 0.0f;
 		}
 		for (int l3 = 0; l3 < 2; l3 = l3 + 1) {
-			fRec4[l3] = 0.0f;
+			fRec7[l3] = 0.0f;
 		}
 		for (int l4 = 0; l4 < 2; l4 = l4 + 1) {
-			fRec3[l4] = 0.0f;
+			fVec1[l4] = 0.0f;
 		}
-		for (int l5 = 0; l5 < 3; l5 = l5 + 1) {
-			fRec2[l5] = 0.0f;
+		for (int l5 = 0; l5 < 2; l5 = l5 + 1) {
+			fRec6[l5] = 0.0f;
 		}
-		for (int l6 = 0; l6 < 3; l6 = l6 + 1) {
-			fRec1[l6] = 0.0f;
+		for (int l6 = 0; l6 < 2; l6 = l6 + 1) {
+			fRec5[l6] = 0.0f;
 		}
 		for (int l7 = 0; l7 < 3; l7 = l7 + 1) {
-			fRec0[l7] = 0.0f;
+			fRec4[l7] = 0.0f;
 		}
-		for (int l8 = 0; l8 < 2; l8 = l8 + 1) {
-			fVec2[l8] = 0.0f;
+		for (int l8 = 0; l8 < 3; l8 = l8 + 1) {
+			fRec3[l8] = 0.0f;
 		}
-		for (int l9 = 0; l9 < 2; l9 = l9 + 1) {
-			fRec11[l9] = 0.0f;
+		for (int l9 = 0; l9 < 3; l9 = l9 + 1) {
+			fRec2[l9] = 0.0f;
 		}
-		for (int l10 = 0; l10 < 2; l10 = l10 + 1) {
-			fVec3[l10] = 0.0f;
+		for (int l10 = 0; l10 < 3; l10 = l10 + 1) {
+			fRec1[l10] = 0.0f;
 		}
-		for (int l11 = 0; l11 < 2; l11 = l11 + 1) {
-			fRec10[l11] = 0.0f;
+		for (int l11 = 0; l11 < 3; l11 = l11 + 1) {
+			fRec0[l11] = 0.0f;
 		}
-		for (int l12 = 0; l12 < 2; l12 = l12 + 1) {
-			fRec9[l12] = 0.0f;
+		for (int l12 = 0; l12 < 3; l12 = l12 + 1) {
+			fRec19[l12] = 0.0f;
 		}
 		for (int l13 = 0; l13 < 3; l13 = l13 + 1) {
-			fRec8[l13] = 0.0f;
+			fRec18[l13] = 0.0f;
 		}
-		for (int l14 = 0; l14 < 3; l14 = l14 + 1) {
-			fRec7[l14] = 0.0f;
+		for (int l14 = 0; l14 < 2; l14 = l14 + 1) {
+			fVec2[l14] = 0.0f;
 		}
-		for (int l15 = 0; l15 < 3; l15 = l15 + 1) {
-			fRec6[l15] = 0.0f;
+		for (int l15 = 0; l15 < 2; l15 = l15 + 1) {
+			fRec17[l15] = 0.0f;
+		}
+		for (int l16 = 0; l16 < 2; l16 = l16 + 1) {
+			fVec3[l16] = 0.0f;
+		}
+		for (int l17 = 0; l17 < 2; l17 = l17 + 1) {
+			fRec16[l17] = 0.0f;
+		}
+		for (int l18 = 0; l18 < 2; l18 = l18 + 1) {
+			fRec15[l18] = 0.0f;
+		}
+		for (int l19 = 0; l19 < 3; l19 = l19 + 1) {
+			fRec14[l19] = 0.0f;
+		}
+		for (int l20 = 0; l20 < 3; l20 = l20 + 1) {
+			fRec13[l20] = 0.0f;
+		}
+		for (int l21 = 0; l21 < 3; l21 = l21 + 1) {
+			fRec12[l21] = 0.0f;
+		}
+		for (int l22 = 0; l22 < 3; l22 = l22 + 1) {
+			fRec11[l22] = 0.0f;
+		}
+		for (int l23 = 0; l23 < 3; l23 = l23 + 1) {
+			fRec10[l23] = 0.0f;
 		}
 	}
 	
@@ -323,7 +376,7 @@ class mydsp final : public dsp {
 		float fSlow11 = fConst7 * (fConst7 + fSlow10) + 1.0f;
 		float fSlow12 = ((iSlow1) ? fSlow9 : fConst5);
 		float fSlow13 = fConst7 * (fConst7 - fSlow12) + 1.0f;
-		float fSlow14 = 1.0f - fConst7 * (fSlow10 - fConst7);
+		float fSlow14 = fConst7 * (fConst7 - fSlow10) + 1.0f;
 		float fSlow15 = 2e+01f * float(fHslider1);
 		int iSlow16 = fSlow15 > 0.0f;
 		float fSlow17 = fConst9 * std::pow(1e+01f, 0.05f * std::fabs(fSlow15));
@@ -331,47 +384,63 @@ class mydsp final : public dsp {
 		float fSlow19 = fConst11 * (fConst11 + fSlow18) + 1.0f;
 		float fSlow20 = ((iSlow16) ? fSlow17 : fConst9);
 		float fSlow21 = fConst11 * (fConst11 - fSlow20) + 1.0f;
-		float fSlow22 = 1.0f - fConst11 * (fSlow18 - fConst11);
+		float fSlow22 = fConst11 * (fConst11 - fSlow18) + 1.0f;
 		float fSlow23 = std::pow(1e+01f, 1.5f * float(fHslider2));
 		float fSlow24 = fConst11 * (fConst11 + fSlow20) + 1.0f;
 		float fSlow25 = fConst7 * (fConst7 + fSlow12) + 1.0f;
 		float fSlow26 = fConst3 * (fConst3 + fSlow6) + 1.0f;
 		float fSlow27 = float(fHslider3);
 		for (int i0 = 0; i0 < count; i0 = i0 + 1) {
-			float fTemp0 = fConst4 * fRec0[1];
-			float fTemp1 = fConst8 * fRec1[1];
-			float fTemp2 = fConst12 * fRec2[1];
-			float fTemp3 = fSlow23 * float(input0[i0]);
+			float fTemp0 = fConst4 * fRec2[1];
+			float fTemp1 = fConst8 * fRec3[1];
+			float fTemp2 = fConst12 * fRec4[1];
+			fRec9[0] = float(input0[i0]) + 0.9505005f * fRec9[1] - 0.2499908f * fRec9[2];
+			fRec8[0] = 0.14974517f * fRec9[1] + 0.07487258f * (fRec9[0] + fRec9[2]) + 1.2180791f * fRec8[1] - 0.60187995f * fRec8[2];
+			float fTemp3 = fSlow23 * (0.19190045f * fRec8[1] + 0.09595022f * (fRec8[0] + fRec8[2]));
 			float fTemp4 = tanhf(std::min<float>(0.0f, fTemp3)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
 			fVec0[0] = fTemp4;
-			fRec5[0] = fConst18 * fVec0[1] - fConst17 * (fConst15 * fRec5[1] - fConst14 * fTemp4);
-			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec5[0]) + std::min<float>(-0.3f, fRec5[0])));
+			fRec7[0] = fConst18 * fVec0[1] - fConst17 * (fConst15 * fRec7[1] - fConst14 * fTemp4);
+			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec7[0]) + std::min<float>(-0.3f, fRec7[0])));
 			fVec1[0] = fTemp5;
-			fRec4[0] = 0.0f - fConst21 * (fConst20 * fRec4[1] - (fTemp5 + fVec1[1]));
-			fRec3[0] = fConst18 * fRec4[1] - fConst17 * (fConst15 * fRec3[1] - fConst14 * fRec4[0]);
-			fRec2[0] = fRec3[0] - (fRec2[2] * fSlow22 + fTemp2) / fSlow19;
-			fRec1[0] = (fTemp2 + fRec2[0] * fSlow24 + fRec2[2] * fSlow21) / fSlow19 - (fRec1[2] * fSlow14 + fTemp1) / fSlow11;
-			fRec0[0] = (fTemp1 + fRec1[0] * fSlow25 + fRec1[2] * fSlow13) / fSlow11 - (fRec0[2] * fSlow8 + fTemp0) / fSlow5;
-			output0[i0] = FAUSTFLOAT(fSlow27 * ((fTemp0 + fRec0[0] * fSlow26 + fRec0[2] * fSlow7) / fSlow5));
-			float fTemp6 = fConst4 * fRec6[1];
-			float fTemp7 = fConst8 * fRec7[1];
-			float fTemp8 = fConst12 * fRec8[1];
-			float fTemp9 = fSlow23 * float(input1[i0]);
+			fRec6[0] = 0.0f - fConst21 * (fConst20 * fRec6[1] - (fTemp5 + fVec1[1]));
+			fRec5[0] = fConst18 * fRec6[1] - fConst17 * (fConst15 * fRec5[1] - fConst14 * fRec6[0]);
+			fRec4[0] = fRec5[0] - (fRec4[2] * fSlow22 + fTemp2) / fSlow19;
+			fRec3[0] = (fTemp2 + fRec4[0] * fSlow24 + fRec4[2] * fSlow21) / fSlow19 - (fRec3[2] * fSlow14 + fTemp1) / fSlow11;
+			fRec2[0] = (fTemp1 + fRec3[0] * fSlow25 + fRec3[2] * fSlow13) / fSlow11 - (fRec2[2] * fSlow8 + fTemp0) / fSlow5;
+			fRec1[0] = fSlow27 * ((fTemp0 + fRec2[0] * fSlow26 + fRec2[2] * fSlow7) / fSlow5) + 0.9505005f * fRec1[1] - 0.2499908f * fRec1[2];
+			fRec0[0] = 0.14974517f * fRec1[1] + 0.07487258f * (fRec1[0] + fRec1[2]) + 1.2180791f * fRec0[1] - 0.60187995f * fRec0[2];
+			output0[i0] = FAUSTFLOAT(0.19190045f * fRec0[1] + 0.09595022f * (fRec0[0] + fRec0[2]));
+			float fTemp6 = fConst4 * fRec12[1];
+			float fTemp7 = fConst8 * fRec13[1];
+			float fTemp8 = fConst12 * fRec14[1];
+			fRec19[0] = float(input1[i0]) + 0.9505005f * fRec19[1] - 0.2499908f * fRec19[2];
+			fRec18[0] = 0.14974517f * fRec19[1] + 0.07487258f * (fRec19[0] + fRec19[2]) + 1.2180791f * fRec18[1] - 0.60187995f * fRec18[2];
+			float fTemp9 = fSlow23 * (0.19190045f * fRec18[1] + 0.09595022f * (fRec18[0] + fRec18[2]));
 			float fTemp10 = tanhf(std::min<float>(0.0f, fTemp9)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
 			fVec2[0] = fTemp10;
-			fRec11[0] = fConst18 * fVec2[1] + fConst17 * (fConst14 * fTemp10 - fConst15 * fRec11[1]);
-			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec11[0]) + std::min<float>(-0.3f, fRec11[0])));
+			fRec17[0] = fConst18 * fVec2[1] - fConst17 * (fConst15 * fRec17[1] - fConst14 * fTemp10);
+			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec17[0]) + std::min<float>(-0.3f, fRec17[0])));
 			fVec3[0] = fTemp11;
-			fRec10[0] = 0.0f - fConst21 * (fConst20 * fRec10[1] - (fTemp11 + fVec3[1]));
-			fRec9[0] = fConst18 * fRec10[1] - fConst17 * (fConst15 * fRec9[1] - fConst14 * fRec10[0]);
-			fRec8[0] = fRec9[0] - (fSlow22 * fRec8[2] + fTemp8) / fSlow19;
-			fRec7[0] = (fTemp8 + fRec8[0] * fSlow24 + fSlow21 * fRec8[2]) / fSlow19 - (fSlow14 * fRec7[2] + fTemp7) / fSlow11;
-			fRec6[0] = (fTemp7 + fRec7[0] * fSlow25 + fSlow13 * fRec7[2]) / fSlow11 - (fSlow8 * fRec6[2] + fTemp6) / fSlow5;
-			output1[i0] = FAUSTFLOAT(fSlow27 * ((fTemp6 + fRec6[0] * fSlow26 + fSlow7 * fRec6[2]) / fSlow5));
+			fRec16[0] = 0.0f - fConst21 * (fConst20 * fRec16[1] - (fTemp11 + fVec3[1]));
+			fRec15[0] = fConst18 * fRec16[1] - fConst17 * (fConst15 * fRec15[1] - fConst14 * fRec16[0]);
+			fRec14[0] = fRec15[0] - (fSlow22 * fRec14[2] + fTemp8) / fSlow19;
+			fRec13[0] = (fTemp8 + fRec14[0] * fSlow24 + fSlow21 * fRec14[2]) / fSlow19 - (fSlow14 * fRec13[2] + fTemp7) / fSlow11;
+			fRec12[0] = (fTemp7 + fRec13[0] * fSlow25 + fSlow13 * fRec13[2]) / fSlow11 - (fSlow8 * fRec12[2] + fTemp6) / fSlow5;
+			fRec11[0] = fSlow27 * ((fTemp6 + fRec12[0] * fSlow26 + fSlow7 * fRec12[2]) / fSlow5) + 0.9505005f * fRec11[1] - 0.2499908f * fRec11[2];
+			fRec10[0] = 0.07487258f * (fRec11[0] + fRec11[2]) + 0.14974517f * fRec11[1] + 1.2180791f * fRec10[1] - 0.60187995f * fRec10[2];
+			output1[i0] = FAUSTFLOAT(0.19190045f * fRec10[1] + 0.09595022f * (fRec10[0] + fRec10[2]));
+			fRec9[2] = fRec9[1];
+			fRec9[1] = fRec9[0];
+			fRec8[2] = fRec8[1];
+			fRec8[1] = fRec8[0];
 			fVec0[1] = fVec0[0];
-			fRec5[1] = fRec5[0];
+			fRec7[1] = fRec7[0];
 			fVec1[1] = fVec1[0];
+			fRec6[1] = fRec6[0];
+			fRec5[1] = fRec5[0];
+			fRec4[2] = fRec4[1];
 			fRec4[1] = fRec4[0];
+			fRec3[2] = fRec3[1];
 			fRec3[1] = fRec3[0];
 			fRec2[2] = fRec2[1];
 			fRec2[1] = fRec2[0];
@@ -379,17 +448,25 @@ class mydsp final : public dsp {
 			fRec1[1] = fRec1[0];
 			fRec0[2] = fRec0[1];
 			fRec0[1] = fRec0[0];
+			fRec19[2] = fRec19[1];
+			fRec19[1] = fRec19[0];
+			fRec18[2] = fRec18[1];
+			fRec18[1] = fRec18[0];
 			fVec2[1] = fVec2[0];
-			fRec11[1] = fRec11[0];
+			fRec17[1] = fRec17[0];
 			fVec3[1] = fVec3[0];
+			fRec16[1] = fRec16[0];
+			fRec15[1] = fRec15[0];
+			fRec14[2] = fRec14[1];
+			fRec14[1] = fRec14[0];
+			fRec13[2] = fRec13[1];
+			fRec13[1] = fRec13[0];
+			fRec12[2] = fRec12[1];
+			fRec12[1] = fRec12[0];
+			fRec11[2] = fRec11[1];
+			fRec11[1] = fRec11[0];
+			fRec10[2] = fRec10[1];
 			fRec10[1] = fRec10[0];
-			fRec9[1] = fRec9[0];
-			fRec8[2] = fRec8[1];
-			fRec8[1] = fRec8[0];
-			fRec7[2] = fRec7[1];
-			fRec7[1] = fRec7[0];
-			fRec6[2] = fRec6[1];
-			fRec6[1] = fRec6[0];
 		}
 	}
 
