@@ -2,8 +2,8 @@
 author: "Benjamin Quiedeville"
 name: "TableSaw"
 version: "0.0.1"
-Code generated with Faust 2.60.3 (https://faust.grame.fr)
-Compilation options: -a minimal-effect.cpp -lang cpp -nvi -ct 1 -es 1 -mcd 16 -single -ftz 0
+Code generated with Faust 2.54.9 (https://faust.grame.fr)
+Compilation options: -a minimal-effect.cpp -lang cpp -es 1 -mcd 16 -single -ftz 0
 ------------------------------------------------------------ */
 
 #ifndef  __mydsp_H__
@@ -147,14 +147,12 @@ class mydsp final : public dsp {
 	float fRec10[3];
 	
  public:
-	mydsp() {}
-
+	
 	void metadata(Meta* m) { 
 		m->declare("author", "Benjamin Quiedeville");
 		m->declare("basics.lib/name", "Faust Basic Element Library");
-		m->declare("basics.lib/tabulateNd", "Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>");
-		m->declare("basics.lib/version", "1.10.0");
-		m->declare("compile_options", "-a minimal-effect.cpp -lang cpp -nvi -ct 1 -es 1 -mcd 16 -single -ftz 0");
+		m->declare("basics.lib/version", "0.9");
+		m->declare("compile_options", "-a minimal-effect.cpp -lang cpp -es 1 -mcd 16 -single -ftz 0");
 		m->declare("description", "Boss HM2 Emulation");
 		m->declare("filename", "tablesaw.dsp");
 		m->declare("filter.lib/author", "Julius O. Smith (jos at ccrma.stanford.edu)");
@@ -182,7 +180,7 @@ class mydsp final : public dsp {
 		m->declare("filters.lib/tf2s:author", "Julius O. Smith III");
 		m->declare("filters.lib/tf2s:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
 		m->declare("filters.lib/tf2s:license", "MIT-style STK-4.3 license");
-		m->declare("filters.lib/version", "1.3.0");
+		m->declare("filters.lib/version", "0.3");
 		m->declare("math.lib/author", "GRAME");
 		m->declare("math.lib/copyright", "GRAME");
 		m->declare("math.lib/deprecated", "This library is deprecated and is not maintained anymore. It will be removed in August 2017.");
@@ -193,7 +191,7 @@ class mydsp final : public dsp {
 		m->declare("maths.lib/copyright", "GRAME");
 		m->declare("maths.lib/license", "LGPL with exception");
 		m->declare("maths.lib/name", "Faust Math Library");
-		m->declare("maths.lib/version", "2.6.0");
+		m->declare("maths.lib/version", "2.5");
 		m->declare("music.lib/author", "GRAME");
 		m->declare("music.lib/copyright", "GRAME");
 		m->declare("music.lib/deprecated", "This library is deprecated and is not maintained anymore. It will be removed in August 2017.");
@@ -202,7 +200,7 @@ class mydsp final : public dsp {
 		m->declare("music.lib/version", "1.0");
 		m->declare("name", "TableSaw");
 		m->declare("platform.lib/name", "Generic Platform Library");
-		m->declare("platform.lib/version", "1.3.0");
+		m->declare("platform.lib/version", "0.3");
 		m->declare("version", "0.0.1");
 	}
 
@@ -384,12 +382,12 @@ class mydsp final : public dsp {
 		float fSlow19 = fConst11 * (fConst11 + fSlow18) + 1.0f;
 		float fSlow20 = ((iSlow16) ? fSlow17 : fConst9);
 		float fSlow21 = fConst11 * (fConst11 - fSlow20) + 1.0f;
-		float fSlow22 = fConst11 * (fConst11 - fSlow18) + 1.0f;
-		float fSlow23 = std::pow(1e+01f, 1.5f * float(fHslider2));
+		float fSlow22 = 1.0f - fConst11 * (fSlow18 - fConst11);
+		float fSlow23 = std::pow(1e+01f, 2.5f * float(fHslider2));
 		float fSlow24 = fConst11 * (fConst11 + fSlow20) + 1.0f;
 		float fSlow25 = fConst7 * (fConst7 + fSlow12) + 1.0f;
 		float fSlow26 = fConst3 * (fConst3 + fSlow6) + 1.0f;
-		float fSlow27 = float(fHslider3);
+		float fSlow27 = 0.1f * float(fHslider3);
 		for (int i0 = 0; i0 < count; i0 = i0 + 1) {
 			float fTemp0 = fConst4 * fRec2[1];
 			float fTemp1 = fConst8 * fRec3[1];
@@ -397,10 +395,10 @@ class mydsp final : public dsp {
 			fRec9[0] = float(input0[i0]) + 0.9505005f * fRec9[1] - 0.2499908f * fRec9[2];
 			fRec8[0] = 0.14974517f * fRec9[1] + 0.07487258f * (fRec9[0] + fRec9[2]) + 1.2180791f * fRec8[1] - 0.60187995f * fRec8[2];
 			float fTemp3 = fSlow23 * (0.19190045f * fRec8[1] + 0.09595022f * (fRec8[0] + fRec8[2]));
-			float fTemp4 = tanhf(std::min<float>(0.0f, fTemp3)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
+			float fTemp4 = std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::min<float>(0.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
 			fVec0[0] = fTemp4;
 			fRec7[0] = fConst18 * fVec0[1] - fConst17 * (fConst15 * fRec7[1] - fConst14 * fTemp4);
-			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec7[0]) + std::min<float>(-0.3f, fRec7[0])));
+			float fTemp5 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.1f, fRec7[0]) + std::min<float>(-0.1f, fRec7[0])));
 			fVec1[0] = fTemp5;
 			fRec6[0] = 0.0f - fConst21 * (fConst20 * fRec6[1] - (fTemp5 + fVec1[1]));
 			fRec5[0] = fConst18 * fRec6[1] - fConst17 * (fConst15 * fRec5[1] - fConst14 * fRec6[0]);
@@ -416,10 +414,10 @@ class mydsp final : public dsp {
 			fRec19[0] = float(input1[i0]) + 0.9505005f * fRec19[1] - 0.2499908f * fRec19[2];
 			fRec18[0] = 0.14974517f * fRec19[1] + 0.07487258f * (fRec19[0] + fRec19[2]) + 1.2180791f * fRec18[1] - 0.60187995f * fRec18[2];
 			float fTemp9 = fSlow23 * (0.19190045f * fRec18[1] + 0.09595022f * (fRec18[0] + fRec18[2]));
-			float fTemp10 = tanhf(std::min<float>(0.0f, fTemp9)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
+			float fTemp10 = std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::min<float>(0.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
 			fVec2[0] = fTemp10;
 			fRec17[0] = fConst18 * fVec2[1] - fConst17 * (fConst15 * fRec17[1] - fConst14 * fTemp10);
-			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.3f, fRec17[0]) + std::min<float>(-0.3f, fRec17[0])));
+			float fTemp11 = std::max<float>(-1.0f, std::min<float>(1.0f, std::max<float>(0.1f, fRec17[0]) + std::min<float>(-0.1f, fRec17[0])));
 			fVec3[0] = fTemp11;
 			fRec16[0] = 0.0f - fConst21 * (fConst20 * fRec16[1] - (fTemp11 + fVec3[1]));
 			fRec15[0] = fConst18 * fRec16[1] - fConst17 * (fConst15 * fRec15[1] - fConst14 * fRec16[0]);
@@ -427,7 +425,7 @@ class mydsp final : public dsp {
 			fRec13[0] = (fTemp8 + fRec14[0] * fSlow24 + fSlow21 * fRec14[2]) / fSlow19 - (fSlow14 * fRec13[2] + fTemp7) / fSlow11;
 			fRec12[0] = (fTemp7 + fRec13[0] * fSlow25 + fSlow13 * fRec13[2]) / fSlow11 - (fSlow8 * fRec12[2] + fTemp6) / fSlow5;
 			fRec11[0] = fSlow27 * ((fTemp6 + fRec12[0] * fSlow26 + fSlow7 * fRec12[2]) / fSlow5) + 0.9505005f * fRec11[1] - 0.2499908f * fRec11[2];
-			fRec10[0] = 0.07487258f * (fRec11[0] + fRec11[2]) + 0.14974517f * fRec11[1] + 1.2180791f * fRec10[1] - 0.60187995f * fRec10[2];
+			fRec10[0] = 0.14974517f * fRec11[1] + 0.07487258f * (fRec11[0] + fRec11[2]) + 1.2180791f * fRec10[1] - 0.60187995f * fRec10[2];
 			output1[i0] = FAUSTFLOAT(0.19190045f * fRec10[1] + 0.09595022f * (fRec10[0] + fRec10[2]));
 			fRec9[2] = fRec9[1];
 			fRec9[1] = fRec9[0];

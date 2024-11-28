@@ -28,9 +28,9 @@ with {
 
     ceiling = 1;
     min_gain_db = 0.0;
-    max_gain_db = 30.0;
+    max_gain_db = 50.0;
     dist_gain = ba.db2linear(gain * max_gain_db);
-    crossover_point = 0.3;
+    crossover_point = 0.1;
 
     asym_tanh = _ <: (min(0) : ma.tanh),
                      (min(1) : max(0)),
@@ -56,5 +56,6 @@ with {
         : peak_eq_cq(eq_low * 20, 80, 0.4) 
         : peak_eq_cq(eq_high * 10, 1500, 0.4) 
         : peak_eq_cq(eq_high * 10, 1000, 0.4) 
+        : *(ba.db2linear(-20))
         : *(volume);
 };
