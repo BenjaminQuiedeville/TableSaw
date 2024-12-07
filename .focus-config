@@ -34,19 +34,19 @@ auto_jump_to_error:     true
 
 
 [Debug Build]   # <- command name. Can be arbitrary
-build_command:          python build.py all  # should be an executable or a script
+build_command:          python build_msvc.py all  # should be an executable or a script
 build_working_dir:      %PROJECT_CONFIG_DIR%
 # timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
 key_binding:            F5
 
 [Build Faust]   # <- command name. Can be arbitrary
-build_command:          python build.py faust  # should be an executable or a script
+build_command:          python build_msvc.py faust  # should be an executable or a script
 build_working_dir:      %PROJECT_CONFIG_DIR%
 # timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
 key_binding:            F4
 
 [Debug Build And Run]   # <- command name. Can be arbitrary
-build_command:          vcvarsall.bat x64 && python build.py  # should be an executable or a script
+build_command:          python build_msvc.py  # should be an executable or a script
 build_working_dir:      %PROJECT_CONFIG_DIR%
 # timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
 run_command:            W:/VSTHost/vsthost.exe %PROJECT_CONFIG_DIR%/tablesaw.vst3      # will be run if build succeeds
@@ -54,7 +54,7 @@ run_working_dir:        %PROJECT_CONFIG_DIR%      # working dir for the run comm
 key_binding:            Ctrl-F5
 
 [Release]
-build_command:          python build.py release  # should be an executable or a script
+build_command:          python build_msvc.py release  # should be an executable or a script
 build_working_dir:      %PROJECT_CONFIG_DIR%
 # timeout_in_seconds:     5             # if you don't want a timeout, don't specify it
 key_binding:            F9
