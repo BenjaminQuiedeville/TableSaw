@@ -405,7 +405,7 @@ void cplug_setSampleRateAndBlockSize(void* ptr, double sampleRate, uint32_t maxB
     plugin->sampleRate    = (float)sampleRate;
     plugin->maxBufferSize = maxBlockSize;
     
-    plugin->faust_dsp.init((int)sampleRate);
+    plugin->faust_dsp.init(4 * (int)sampleRate);
     
     
     u32 up_buffer_size = plugin->upsample_factor * maxBlockSize;
@@ -464,7 +464,7 @@ void cplug_process(void* ptr, CplugProcessContext* ctx)
             CPLUG_LOG_ASSERT(output != NULL)
             CPLUG_LOG_ASSERT(output[0] != NULL);
             CPLUG_LOG_ASSERT(output[1] != NULL);
-            assert(num_samples == plugin->maxBufferSize);
+            // assert(num_samples == plugin->maxBufferSize);
             
             // Oversampler *ovs = &plugin->oversampler;
             float *up_buffer_in[2] = {plugin->up_buffer[inL], plugin->up_buffer[inR]};
