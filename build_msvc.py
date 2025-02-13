@@ -51,19 +51,29 @@ if build_cpp:
     output_extension = "vst3"
     
     # c flags
-    flags = f"/nologo /MD /EHsc /utf-8 /MP3 /LD /D _USE_MATH_DEFINES /D \"CPLUG_PLUGIN_NAME=\\\"{output_name}\\\"\""
+    flags = f"/nologo /MD /EHsc /utf-8 /MP /LD /Zc:wchar_t /Zc:forScope /Zc:inline"
+    link_flags = "/OPT:REF"
     
     if release_mode:
-        flags += " /O2"
+        flags += " /Ox /GL /Gy /arch:AVX2"
+        link_flags += " /LTCG"
     else:
         flags += " /Zi"
+        link_flags += " /DEBUG"
         
     warning_flags = "/W3"
+    
+    
+    defines = " ".join([
+        "/D _USE_MATH_DEFINES", 
+        f"/D \"CPLUG_PLUGIN_NAME=\\\"{output_name}\\\"\"",
+    ])
     
     includes = " ".join([
         "/ICPLUG/src",
         "/Iimgui", 
         "/Iimgui/backends",
+        "/Iimgui-knobs",
         f"/FI{workspace_dir}/config.h",
         "/I\"C:/Program Files/Faust/include\""
     ])
@@ -78,6 +88,8 @@ if build_cpp:
         "imgui/imgui_draw.cpp",
         "imgui/imgui_tables.cpp",
         "imgui/imgui_widgets.cpp",
+        
+        "imgui-knobs/imgui-knobs.cpp",
     
         "CPLUG/src/cplug_vst3.c" 
     ])
@@ -91,7 +103,7 @@ if build_cpp:
     
     println("Compiling c code")
     
-    command = f"cl {flags} {warning_flags} {sources} /Fe:{output_name}.vst3 /Fd:{output_name}.pdb {includes} /link {libs}"
+    command = f"cl {flags} {warning_flags} {defines} {sources} /Fe:{output_name}.vst3 /Fd:{output_name}.pdb {includes} /link {libs}"
     println(command)
     
     return_code = os.system(command)

@@ -2,8 +2,8 @@
 author: "Benjamin Quiedeville"
 name: "TableSaw"
 version: "0.0.1"
-Code generated with Faust 2.54.9 (https://faust.grame.fr)
-Compilation options: -a minimal-effect.cpp -lang cpp -es 1 -mcd 16 -single -ftz 0
+Code generated with Faust 2.60.3 (https://faust.grame.fr)
+Compilation options: -a minimal-effect.cpp -lang cpp -nvi -ct 1 -es 1 -mcd 16 -single -ftz 0
 ------------------------------------------------------------ */
 
 #ifndef  __mydsp_H__
@@ -150,12 +150,14 @@ class mydsp final : public dsp {
 	float fRec10[3];
 	
  public:
-	
+	mydsp() {}
+
 	void metadata(Meta* m) { 
 		m->declare("author", "Benjamin Quiedeville");
 		m->declare("basics.lib/name", "Faust Basic Element Library");
-		m->declare("basics.lib/version", "0.9");
-		m->declare("compile_options", "-a minimal-effect.cpp -lang cpp -es 1 -mcd 16 -single -ftz 0");
+		m->declare("basics.lib/tabulateNd", "Copyright (C) 2023 Bart Brouns <bart@magnetophon.nl>");
+		m->declare("basics.lib/version", "1.10.0");
+		m->declare("compile_options", "-a minimal-effect.cpp -lang cpp -nvi -ct 1 -es 1 -mcd 16 -single -ftz 0");
 		m->declare("description", "Boss HM2 Emulation");
 		m->declare("filename", "tablesaw.dsp");
 		m->declare("filter.lib/author", "Julius O. Smith (jos at ccrma.stanford.edu)");
@@ -171,7 +173,7 @@ class mydsp final : public dsp {
 		m->declare("filters.lib/iir:author", "Julius O. Smith III");
 		m->declare("filters.lib/iir:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
 		m->declare("filters.lib/iir:license", "MIT-style STK-4.3 license");
-		m->declare("filters.lib/lowpass0_highpass1", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
+		m->declare("filters.lib/lowpass0_highpass1", "MIT-style STK-4.3 license");
 		m->declare("filters.lib/lowpass0_highpass1:author", "Julius O. Smith III");
 		m->declare("filters.lib/lowpass:author", "Julius O. Smith III");
 		m->declare("filters.lib/lowpass:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
@@ -183,7 +185,7 @@ class mydsp final : public dsp {
 		m->declare("filters.lib/tf2s:author", "Julius O. Smith III");
 		m->declare("filters.lib/tf2s:copyright", "Copyright (C) 2003-2019 by Julius O. Smith III <jos@ccrma.stanford.edu>");
 		m->declare("filters.lib/tf2s:license", "MIT-style STK-4.3 license");
-		m->declare("filters.lib/version", "0.3");
+		m->declare("filters.lib/version", "1.3.0");
 		m->declare("math.lib/author", "GRAME");
 		m->declare("math.lib/copyright", "GRAME");
 		m->declare("math.lib/deprecated", "This library is deprecated and is not maintained anymore. It will be removed in August 2017.");
@@ -194,7 +196,7 @@ class mydsp final : public dsp {
 		m->declare("maths.lib/copyright", "GRAME");
 		m->declare("maths.lib/license", "LGPL with exception");
 		m->declare("maths.lib/name", "Faust Math Library");
-		m->declare("maths.lib/version", "2.5");
+		m->declare("maths.lib/version", "2.6.0");
 		m->declare("music.lib/author", "GRAME");
 		m->declare("music.lib/copyright", "GRAME");
 		m->declare("music.lib/deprecated", "This library is deprecated and is not maintained anymore. It will be removed in August 2017.");
@@ -203,7 +205,7 @@ class mydsp final : public dsp {
 		m->declare("music.lib/version", "1.0");
 		m->declare("name", "TableSaw");
 		m->declare("platform.lib/name", "Generic Platform Library");
-		m->declare("platform.lib/version", "0.3");
+		m->declare("platform.lib/version", "1.3.0");
 		m->declare("version", "0.0.1");
 	}
 
@@ -377,7 +379,7 @@ class mydsp final : public dsp {
 		float fSlow5 = fConst3 * (fConst3 + fSlow4) + 1.0f;
 		float fSlow6 = ((iSlow1) ? fSlow3 : fConst1);
 		float fSlow7 = fConst3 * (fConst3 - fSlow6) + 1.0f;
-		float fSlow8 = 1.0f - fConst3 * (fSlow4 - fConst3);
+		float fSlow8 = fConst3 * (fConst3 - fSlow4) + 1.0f;
 		float fSlow9 = fConst5 * fSlow2;
 		float fSlow10 = ((iSlow1) ? fConst5 : fSlow9);
 		float fSlow11 = fConst7 * (fConst7 + fSlow10) + 1.0f;
@@ -407,7 +409,7 @@ class mydsp final : public dsp {
 			float fTemp4 = tanhf(std::min<float>(0.0f, fTemp3)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp3)) + tanhf(std::max<float>(1.0f, fTemp3) + -1.0f);
 			fVec0[0] = fTemp4;
 			fRec7[0] = 1.5f * (fConst17 * fTemp4 + fConst18 * fVec0[1]) - fConst16 * fRec7[1];
-			float fTemp5 = std::max<float>(-0.7f, std::min<float>(0.7f, std::max<float>(0.1f, fRec7[0]) + std::min<float>(-0.1f, fRec7[0])));
+			float fTemp5 = std::max<float>(-0.7f, std::min<float>(0.7f, std::max<float>(0.02f, fRec7[0]) + std::min<float>(-0.02f, fRec7[0])));
 			fVec1[0] = fTemp5;
 			fRec6[0] = 0.0f - fConst21 * (fConst20 * fRec6[1] - (fTemp5 + fVec1[1]));
 			fRec5[0] = fConst27 * fRec6[1] - fConst26 * (fConst24 * fRec5[1] - fConst23 * fRec6[0]);
@@ -423,13 +425,13 @@ class mydsp final : public dsp {
 			fRec19[0] = float(input1[i0]) + 0.9505005f * fRec19[1] - 0.2499908f * fRec19[2];
 			fRec18[0] = 0.14974517f * fRec19[1] + 0.07487258f * (fRec19[0] + fRec19[2]) + 1.2180791f * fRec18[1] - 0.60187995f * fRec18[2];
 			float fTemp9 = fSlow23 * (0.19190045f * fRec18[1] + 0.09595022f * (fRec18[0] + fRec18[2]));
-			float fTemp10 = std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::min<float>(0.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
+			float fTemp10 = tanhf(std::min<float>(0.0f, fTemp9)) + std::max<float>(0.0f, std::min<float>(1.0f, fTemp9)) + tanhf(std::max<float>(1.0f, fTemp9) + -1.0f);
 			fVec2[0] = fTemp10;
 			fRec17[0] = 1.5f * (fConst17 * fTemp10 + fConst18 * fVec2[1]) - fConst16 * fRec17[1];
-			float fTemp11 = std::max<float>(-0.7f, std::min<float>(0.7f, std::max<float>(0.1f, fRec17[0]) + std::min<float>(-0.1f, fRec17[0])));
+			float fTemp11 = std::max<float>(-0.7f, std::min<float>(0.7f, std::max<float>(0.02f, fRec17[0]) + std::min<float>(-0.02f, fRec17[0])));
 			fVec3[0] = fTemp11;
-			fRec16[0] = fConst21 * (fTemp11 + fVec3[1] - fConst20 * fRec16[1]);
-			fRec15[0] = fConst27 * fRec16[1] + fConst26 * (fConst23 * fRec16[0] - fConst24 * fRec15[1]);
+			fRec16[0] = 0.0f - fConst21 * (fConst20 * fRec16[1] - (fTemp11 + fVec3[1]));
+			fRec15[0] = fConst27 * fRec16[1] - fConst26 * (fConst24 * fRec15[1] - fConst23 * fRec16[0]);
 			fRec14[0] = fRec15[0] - (fSlow22 * fRec14[2] + fTemp8) / fSlow19;
 			fRec13[0] = (fTemp8 + fRec14[0] * fSlow24 + fSlow21 * fRec14[2]) / fSlow19 - (fSlow14 * fRec13[2] + fTemp7) / fSlow11;
 			fRec12[0] = (fTemp7 + fRec13[0] * fSlow25 + fSlow13 * fRec13[2]) / fSlow11 - (fSlow8 * fRec12[2] + fTemp6) / fSlow5;

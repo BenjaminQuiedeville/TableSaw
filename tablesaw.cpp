@@ -14,9 +14,11 @@
 
 #include "CPLUG/src/cplug.h"
 
+#include <imgui-knobs.h>
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_opengl3.h>
+
 
 #define GL_SILENCE_DEPRECATION
 #include <GL/GL.h>
@@ -60,22 +62,20 @@ param additionnels : soft clip ceilings, crossover ceiling, hardclip ceiling, lo
 #define ENABLE_DENORMALS _mm_setcsr(_mm_getcsr() | 0x8040);
 
 typedef uint8_t  u8;
-typedef int8_t   s8;
+typedef int8_t   i8;
 typedef uint16_t u16;
-typedef int16_t  s16;
+typedef int16_t  i16;
 typedef uint32_t u32;
-typedef int32_t  s32;
+typedef int32_t  i32;
 typedef uint64_t u64;
-typedef int64_t  s64;
-typedef float    f32;
-typedef double   f64;
+typedef int64_t  i64;
 
 inline double dbtoa(double value) {
-    return std::pow(10, value/20.0);
+    return pow(10.0, value/20.0);
 }
 
 inline double atodb(double value) {
-    return 20.0 * std::log10(value);
+    return 20.0 * log10(value);
 }
 
 #define CLIP(x, min, max) (x > max ? max : x < min ? min : x)
@@ -117,19 +117,20 @@ struct MyPlugin {
     float    sampleRate = 0.0f;
     uint32_t maxBufferSize = 0;
 
-    float *faust_param_zones[kParameterCount] = {0};
 
-    int   midiNote = -1; // -1 == not playing, 0-127+ playing
+    i32   midiNote = -1; // -1 == not playing, 0-127+ playing
     float velocity = 0; // 0-1
 
     FaustDsp faust_dsp;
-    FaustInterface *faust_interface;
+    FaustInterface faust_interface;
 
     float *up_buffer[4] = {0};
-    int upsample_factor = 4;    
+    u32 upsample_factor = 4;    
     // GUI zone
     void* gui = nullptr;
+
     float paramValuesMain[kParameterCount];
+    float *faust_param_zones[kParameterCount] = {0};
 
     // Single reader writer queue. Pretty sure atomics aren't required, but here anyway
     cplug_atomic_i32 mainToAudioHead;
@@ -201,11 +202,9 @@ void* cplug_createPlugin()
 
     plugin->upsample_factor = 4;
     
-    plugin->faust_interface = new FaustInterface();
-
-    plugin->faust_interface->plugin = plugin;
-    plugin->faust_dsp.buildUserInterface(plugin->faust_interface);
-    int faust_num_params = plugin->faust_interface->getParamsCount();
+    plugin->faust_interface.plugin = plugin;
+    plugin->faust_dsp.buildUserInterface(&plugin->faust_interface);
+    int faust_num_params = plugin->faust_interface.getParamsCount();
     assert(faust_num_params == kParameterCount);
 
 
@@ -220,11 +219,7 @@ void cplug_destroyPlugin(void* ptr)
     
     MyPlugin *plugin = (MyPlugin*)ptr;
     
-    if (plugin->up_buffer[0]) { free(plugin->up_buffer[0]); }
-            
-    delete plugin->faust_interface;
-    plugin->faust_interface = nullptr;
-    
+    if (plugin->up_buffer[0]) { free(plugin->up_buffer[0]); }    
     free(plugin);
 }
 
@@ -300,7 +295,7 @@ void cplug_setParameterValue(void* ptr, uint32_t index, double value)
         value = info->max;
     *plugin->faust_param_zones[index] = (float)value;
 
-    // plugin->faust_interface->setParamValue(*info->faust_label, (FAUSTFLOAT)value);
+    // plugin->faust_interface.setParamValue(*info->faust_label, (FAUSTFLOAT)value);
 
     // Send incoming param update to GUI
     if (plugin->gui)
@@ -554,8 +549,8 @@ struct WGL_WindowData { HDC hDC; };
 static HGLRC            g_hRC;
 static WGL_WindowData   g_MainWindow;
 
-#define GUI_DEFAULT_WIDTH 640
-#define GUI_DEFAULT_HEIGHT 360
+#define GUI_DEFAULT_WIDTH 450
+#define GUI_DEFAULT_HEIGHT 200
 #define GUI_RATIO_X 16
 #define GUI_RATIO_Y 9
 
@@ -628,7 +623,6 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 RedrawWindow(window, 0, 0, RDW_INVALIDATE);
             // fallthrough to paint
         }
-        
         case WM_PAINT: {
             MyPlugin* plugin = gui->plugin;    
             
@@ -653,6 +647,10 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 const ImGuiViewport* viewport = ImGui::GetMainViewport();
                 ImGui::SetNextWindowPos(use_work_area ? viewport->WorkPos : viewport->Pos);
                 ImGui::SetNextWindowSize(use_work_area ? viewport->WorkSize : viewport->Size);
+
+                // ImGuiStyle *style = ImGui::GetStyle();
+                // style->Colors est un ImVec4 { x, y, z, w }
+                // cast ImVec4 en float* pour l'indexer
         
                 // Create a window called "Hello, world!" and append into it.
                 ImGui::Begin("Table Saw");
@@ -668,19 +666,23 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM wParam, LPAR
                 high_slider_value = (float)cplug_getParameterValue(plugin, kHigh);
                 vol_slider_value  = (float)cplug_getParameterValue(plugin, kVol);
                 
-                if (ImGui::SliderFloat("Gain", &gain_slider_value, 0.0f, 1.0f)) {
+                static const float knob_size = 90.0f;
+                
+                if (ImGuiKnobs::Knob("Gain", &gain_slider_value, 0.0f, 1.0f, 0.01f, "%.2f", ImGuiKnobVariant_WiperOnly, knob_size)) {
                     cplug_setParameterValue(plugin, kGain, gain_slider_value);
                 }
-        
-                if (ImGui::SliderFloat("Low", &low_slider_value, 0.0f, 1.0f)) {
+                ImGui::SameLine();
+                if (ImGuiKnobs::Knob("Low", &low_slider_value, 0.0f, 1.0f, 0.01f, "%.2f", ImGuiKnobVariant_WiperOnly, knob_size)) {
                     cplug_setParameterValue(plugin, kLow, low_slider_value);
                 }
         
-                if (ImGui::SliderFloat("High", &high_slider_value, 0.0f, 1.0f)) {
+                ImGui::SameLine();
+                if (ImGuiKnobs::Knob("High", &high_slider_value, 0.0f, 1.0f, 0.01f, "%.2f", ImGuiKnobVariant_WiperOnly, knob_size)) {
                     cplug_setParameterValue(plugin, kHigh, high_slider_value);
                 }
         
-                if (ImGui::SliderFloat("Volume", &vol_slider_value, 0.0f, 1.0f)) {
+                ImGui::SameLine();
+                if (ImGuiKnobs::Knob("Volume", &vol_slider_value, 0.0f, 1.0f, 0.01f, "%.2f", ImGuiKnobVariant_WiperOnly, knob_size)) {
                     cplug_setParameterValue(plugin, kVol, vol_slider_value);
                 }        
                 ImGui::End();

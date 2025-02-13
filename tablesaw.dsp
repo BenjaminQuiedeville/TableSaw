@@ -29,7 +29,7 @@ with {
     min_gain_db = 0.0;
     max_gain_db = 60.0;
     dist_gain = ba.db2linear(gain * max_gain_db);
-    crossover_point = 0.1;
+    crossover_point = 0.02;
 
     asym_tanh = _ <: (min(0) : ma.tanh),
                      (min(1) : max(0)),
