@@ -1,9 +1,9 @@
 [submodule "CPLUG"]
 	path = CPLUG
 	url = https://github.com/Tremus/CPLUG.git
-[submodule "imgui"]
-	path = imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "imgui-knobs"]
 	path = imgui-knobs
 	url = https://github.com/altschuler/imgui-knobs.git
+[submodule "imgui_patched"]
+	path = imgui_patched
+	url = https://github.com/BenjaminQuiedeville/imgui.git
